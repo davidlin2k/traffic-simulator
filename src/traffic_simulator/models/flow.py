@@ -8,4 +8,3 @@ class Flow:
     flow_size: int
     assigned_port: int | None = None
     assigned_server: int | None = None
-    

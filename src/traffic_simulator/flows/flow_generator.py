@@ -15,10 +15,11 @@ class FlowGenerator(ABC):
         pass
 
 
-class FlowGenerator(FlowGenerator):
+class PoissonFlowGenerator(FlowGenerator):
     """
     Generates flows using a Poisson process for arrivals.
     """
+
     def __init__(self, arrival_rate: float, flow_size_generator: FlowSizeGenerator):
         """
         arrival_rate: Expected number of flows per time interval (λ).
@@ -28,30 +29,17 @@ class FlowGenerator(FlowGenerator):
         self.flow_size_generator = flow_size_generator
         self.next_flow_id = 0
 
-    def _sample_poisson(self) -> int:
-        """
-        Sample the number of arrivals in an interval using the Poisson process.
-        Uses the Knuth algorithm.
-        """
-        L = math.exp(-self.arrival_rate)
-        k = 0
-        p = 1.0
-        while p > L:
-            k += 1
-            p *= random.random()
-        return k - 1  # because loop runs one extra time
-
-    def generate_flows(self, current_time: float) -> list[Flow]:
-        num_arrivals = self._sample_poisson()
+    def generate_flows(self, current_time: float, end_time: float) -> list[Flow]:
         flows = []
-        for _ in range(num_arrivals):
+
+        while current_time < end_time:
             flow_size = self.flow_size_generator.generate()
+            current_time += random.expovariate(self.arrival_rate)
+
             flow = Flow(
-                id=self.next_flow_id,
-                arrival_time=current_time,
-                flow_size=flow_size
+                id=self.next_flow_id, arrival_time=current_time, flow_size=flow_size
             )
             self.next_flow_id += 1
             flows.append(flow)
+
         return flows
-    
