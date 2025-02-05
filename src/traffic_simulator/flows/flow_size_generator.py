@@ -1,6 +1,13 @@
 from abc import ABC, abstractmethod
 import random
 
+from traffic_simulator.config.models import (
+    BoundedParetoConfig,
+    SimulatorConfig,
+    UniformFlowSizeConfig,
+)
+from traffic_simulator.flows.distribution import BoundedParetoDistribution, Distribution
+
 
 class FlowSizeGenerator(ABC):
     @abstractmethod
@@ -25,17 +32,13 @@ class UniformFlowSizeGenerator(FlowSizeGenerator):
         return random.randint(self.min_flow_size, self.max_flow_size)
 
 
-class CDFFlowSizeGenerator(FlowSizeGenerator):
-    def __init__(self, cdf: dict[int, float]):
-        self.cdf = cdf
+class QuantileFlowSizeGenerator(FlowSizeGenerator):
+    def __init__(self, distribution: Distribution):
+        self.distribution = distribution
 
     def generate(self) -> int:
-        random_number = random.random()
-        for flow_size, probability in self.cdf.items():
-            if random_number < probability:
-                return flow_size
-            random_number -= probability
-        return flow_size
+        u = random.random()
+        return self.distribution.quantile(u)
 
 
 class FlowSizeGeneratorFactory:
@@ -43,13 +46,32 @@ class FlowSizeGeneratorFactory:
     _generator_mapping = {
         "constant": ConstantFlowSizeGenerator,
         "uniform": UniformFlowSizeGenerator,
-        "cdf": CDFFlowSizeGenerator,
+        "quantile": QuantileFlowSizeGenerator,
     }
 
     @classmethod
-    def create_generator(cls, generator_type: str, **kwargs) -> FlowSizeGenerator:
-        try:
-            generator_cls = cls._generator_mapping[generator_type]
-        except KeyError:
-            raise ValueError(f"Unknown generator type: {generator_type}")
-        return generator_cls(**kwargs)
+    def create_generator(cls, config: SimulatorConfig) -> FlowSizeGenerator:
+        if config.flow_size_gen.type == "bounded_pareto":
+            if not isinstance(config.flow_size_gen.params, BoundedParetoConfig):
+                raise ValueError("Invalid parameters for Bounded Pareto.")
+
+            distribution = BoundedParetoDistribution(
+                lower_bound=config.flow_size_gen.params.lower,
+                upper_bound=config.flow_size_gen.params.upper,
+                alpha=config.flow_size_gen.params.alpha,
+            )
+            return QuantileFlowSizeGenerator(distribution)
+
+        elif config.flow_size_gen.type == "uniform":
+            if not isinstance(config.flow_size_gen.params, UniformFlowSizeConfig):
+                raise ValueError("Invalid parameters for Uniform flow size generator.")
+
+            return UniformFlowSizeGenerator(
+                min_flow_size=config.flow_size_gen.params.min_flow_size,
+                max_flow_size=config.flow_size_gen.params.max_flow_size,
+            )
+
+        else:
+            raise ValueError(
+                f"Unsupported flow size generator type: {config.flow_size_gen.type}"
+            )
