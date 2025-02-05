@@ -15,7 +15,7 @@ class UniformPortAssigner(PortAssigner):
         self.ports = ports
 
     def assign_port(self, flow: Flow) -> int:
-        assigned = random.choice(self.ports)
+        assigned = random.randrange(len(self.ports))
         flow.assigned_port = assigned
         return assigned
 

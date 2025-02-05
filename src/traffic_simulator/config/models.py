@@ -18,10 +18,12 @@ class FlowSizeGenConfig(BaseModel):
     type: str = Field(..., description="Type of flow size generator")
     params: Union[BoundedParetoConfig, UniformFlowSizeConfig]
 
-
 class SimulatorConfig(BaseModel):
     simulation_time: float = Field(..., description="Total simulation time")
     arrival_rate: float = Field(..., description="Flow arrival rate")
     flow_size_gen: FlowSizeGenConfig = Field(
         ..., description="Flow size generator configuration"
+    )
+    link_capacities: list[float] = Field(
+        ..., description="List of link capacities (in bits per second)"
     )

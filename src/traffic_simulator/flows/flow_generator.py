@@ -11,7 +11,7 @@ class FlowGenerator(ABC):
         self.flow_size_generator = flow_size_generator
 
     @abstractmethod
-    def generate_flows(self, current_time: float) -> list[Flow]:
+    def generate_flows(self, current_time: float) -> Generator[Flow, None, None]:
         pass
 
 

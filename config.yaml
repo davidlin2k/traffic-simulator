@@ -1,8 +1,13 @@
 simulation_time: 10.0
-arrival_rate: 2.0
+arrival_rate: 10.0
 flow_size_gen:
   type: bounded_pareto  # Options: "bounded_pareto", "uniform", etc.
   params:
     alpha: 0.125
     lower: 3
     upper: 29892
+link_capacities:
+- 10240
+- 10240
+- 10240
+- 10240
