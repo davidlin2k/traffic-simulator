@@ -34,10 +34,8 @@ class Simulator:
         flow_sizes = [flow.flow_size for flow in self.all_flows]
 
         plt.figure(figsize=(10, 6))
-        scatter = plt.scatter(arrival_times, flow_sizes, cmap="viridis", alpha=0.7)
+        plt.scatter(arrival_times, flow_sizes)
         plt.xlabel("Arrival Time")
         plt.ylabel("Flow Size")
         plt.title("Flow Arrival Times and Sizes")
-        cbar = plt.colorbar(scatter)
-        cbar.set_label("Assigned Port")
         plt.show()
