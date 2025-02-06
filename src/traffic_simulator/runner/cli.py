@@ -19,16 +19,17 @@ def cli(config: str):
 
     flow_size_generator = FlowSizeGeneratorFactory.create_generator(sim_config)
     flow_generator = PoissonFlowGenerator(
-        arrival_rate=sim_config.arrival_rate, flow_size_generator=flow_size_generator
+        arrival_rate=sim_config.traffic.flow_arrival.rate, flow_size_generator=flow_size_generator
     )
 
-    port_assigner = UniformPortAssigner(sim_config.link_capacities)
+    link_capacities = [link_config.capacity for link_config in sim_config.network.links]
+    port_assigner = UniformPortAssigner(link_capacities)
 
     simulator = Simulator(
-        simulation_time=sim_config.simulation_time,
+        simulation_time=sim_config.simulation.duration,
         flow_generator=flow_generator,
         port_assigner=port_assigner,
-        link_capacities=sim_config.link_capacities,
+        link_capacities=link_capacities,
     )
     simulator.run()
     simulator.visualize_flows_scatter()

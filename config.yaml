@@ -1,13 +1,30 @@
-simulation_time: 10.0
-arrival_rate: 10.0
-flow_size_gen:
-  type: bounded_pareto  # Options: "bounded_pareto", "uniform", etc.
-  params:
-    alpha: 0.125
-    lower: 3
-    upper: 29892
-link_capacities:
-- 10240
-- 10240
-- 10240
-- 10240
+version: "1.0"
+
+simulation:
+  duration: 10.0
+  logging:
+    level: "INFO"
+    file: "simulation.log"
+
+network:
+  links:
+    - id: "link1"
+      capacity: 10240
+    - id: "link2"
+      capacity: 10240
+    - id: "link3"
+      capacity: 10240
+    - id: "link4"
+      capacity: 10240
+
+traffic:
+  flow_arrival:
+    type: "poisson"
+    rate: 10.0
+  
+  flow_size:
+    type: "bounded_pareto"
+    params:
+      alpha: 0.125
+      lower: 3
+      upper: 29892

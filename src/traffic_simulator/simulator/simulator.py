@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 from traffic_simulator.flows.flow_generator import FlowGenerator
-from traffic_simulator.metrics.utilization import calculate_link_utilization_multiple
+from traffic_simulator.metrics.utilization import calculate_link_utilization
 from traffic_simulator.ports.port_assigner import PortAssigner
 
 
@@ -36,13 +36,13 @@ class Simulator:
 
     def print_statistics(self):
         print(f"Total flows generated: {len(self.all_flows)}")
-        link_utilization = calculate_link_utilization_multiple(
+        link_utilization = calculate_link_utilization(
             self.all_flows, self.link_capacities, self.simulation_time
         )
         print("Link Utilization:")
         for link, util in link_utilization.items():
             print(
-                f"  Link {link}: {util * 100:.2f}% (Capacity: {self.link_capacities[link]} bps)"
+                f"  Link {link}: {util * 100:.2f}% (Capacity: {self.link_capacities[link]} KBps)"
             )
 
     def visualize_flows_scatter(self):

@@ -1,29 +1,81 @@
-# config_models.py
-from pydantic import BaseModel, Field
-from typing import Dict, Optional, Union
+from typing import List, Literal, Optional, Union
+from pydantic import BaseModel, Field, field_validator
+from pathlib import Path
 
 
-class BoundedParetoConfig(BaseModel):
-    alpha: float = Field(..., description="Pareto shape parameter (alpha)")
-    lower: float = Field(..., description="Lower bound for the distribution")
-    upper: float = Field(..., description="Upper bound for the distribution")
+class LoggingConfig(BaseModel):
+    level: str = "INFO"
+    file: Optional[str] = None
 
 
-class UniformFlowSizeConfig(BaseModel):
-    min_flow_size: float = Field(..., description="Minimum flow size")
-    max_flow_size: float = Field(..., description="Maximum flow size")
+class SimulationConfig(BaseModel):
+    duration: float
+    seed: Optional[int] = None
+    logging: LoggingConfig = LoggingConfig()
+
+    @field_validator("duration")
+    def validate_duration(cls, v):
+        if v <= 0:
+            raise ValueError("Duration must be positive")
+        return v
 
 
-class FlowSizeGenConfig(BaseModel):
-    type: str = Field(..., description="Type of flow size generator")
-    params: Union[BoundedParetoConfig, UniformFlowSizeConfig]
+class LinkConfig(BaseModel):
+    id: str
+    capacity: float
 
-class SimulatorConfig(BaseModel):
-    simulation_time: float = Field(..., description="Total simulation time")
-    arrival_rate: float = Field(..., description="Flow arrival rate")
-    flow_size_gen: FlowSizeGenConfig = Field(
-        ..., description="Flow size generator configuration"
-    )
-    link_capacities: list[float] = Field(
-        ..., description="List of link capacities (in bits per second)"
-    )
+    @field_validator("capacity")
+    def validate_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Value must be positive")
+        return v
+
+
+class NetworkConfig(BaseModel):
+    links: List[LinkConfig]
+
+
+class PoissonArrivalConfig(BaseModel):
+    type: Literal["poisson"]
+    rate: float
+
+    @field_validator("rate")
+    def validate_rate(cls, v):
+        if v <= 0:
+            raise ValueError("Rate must be positive")
+        return v
+
+
+class BoundedParetoParams(BaseModel):
+    alpha: float
+    lower: float
+    upper: float
+
+    @field_validator("alpha", "lower", "upper")
+    def validate_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Parameters must be positive")
+        return v
+
+    @field_validator("upper")
+    def validate_bounds(cls, v, values):
+        if "lower" in values.data and v <= values.data["lower"]:
+            raise ValueError("Upper bound must be greater than lower bound")
+        return v
+
+
+class FlowSizeConfig(BaseModel):
+    type: Literal["bounded_pareto", "uniform"]
+    params: Union[BoundedParetoParams, dict]
+
+
+class TrafficConfig(BaseModel):
+    flow_arrival: PoissonArrivalConfig
+    flow_size: FlowSizeConfig
+
+
+class MainConfig(BaseModel):
+    version: str
+    simulation: SimulationConfig
+    network: NetworkConfig
+    traffic: TrafficConfig
