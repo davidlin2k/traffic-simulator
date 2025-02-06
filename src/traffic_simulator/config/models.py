@@ -23,11 +23,25 @@ class SimulationConfig(BaseModel):
 class LinkConfig(BaseModel):
     id: str
     capacity: float
+    time_window_duration: float
+    target_utilization: float
 
     @field_validator("capacity")
     def validate_positive(cls, v):
         if v <= 0:
             raise ValueError("Value must be positive")
+        return v
+    
+    @field_validator("time_window_duration")
+    def validate_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Value must be positive")
+        return v
+    
+    @field_validator("target_utilization")
+    def validate_positive(cls, v):
+        if v < 0 or v > 1.0:
+            raise ValueError("Value must be within 0.0 and 1.0")
         return v
 
 
