@@ -47,6 +47,7 @@ def cli(config: str):
         flow_generator=flow_generator,
         port_manager=port_manager,
         port_ids=port_ids,
+        config_file=config
     )
     simulator.run()
     simulator.visualize_flows_scatter()

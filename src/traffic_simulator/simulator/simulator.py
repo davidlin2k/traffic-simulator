@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
-
 from traffic_simulator.flows.flow_generator import FlowGenerator
 from traffic_simulator.ports.port_assigner import PortAssigner
 from traffic_simulator.ports.port import Port
 from traffic_simulator.ports.port_manager import PortManager
-
+from pathlib import Path
 
 class Simulator:
     def __init__(
@@ -13,6 +12,7 @@ class Simulator:
         flow_generator: FlowGenerator,
         port_manager: PortManager,
         port_ids: list[int],
+        config_file: str
     ):
         """
         simulation_time: total simulation time.
@@ -23,6 +23,15 @@ class Simulator:
         self.all_flows = []
         self.port_manager = port_manager
         self.port_ids = port_ids
+
+        # Create graphs directory if it doesn't exist
+        self.graphs_dir = Path("graphs")
+        self.graphs_dir.mkdir(exist_ok=True)
+
+        # Extract base name from config file for graph naming
+        config_base = Path(config_file).stem  # Gets filename without extension
+        self.graph_prefix = f"graph_{config_base}"
+
 
     def run(self):
         current_time = 0.0
@@ -59,8 +68,15 @@ class Simulator:
         plt.legend()
         plt.grid(True)
 
-        # Show the plot
-        plt.show()
+        # Save the plot to the graph folder (utilization plot)
+        filename = self.graphs_dir / f"{self.graph_prefix}_utilization.png"
+        plt.savefig(filename)
+        plt.close()
+        print(f"Saved port utilization graph to {filename}")
+
+        # Generate and save other visualizations
+        self.visualize_flows_scatter()
+
 
     def visualize_flows_scatter(self):
         arrival_times = [flow.arrival_time for flow in self.all_flows]
@@ -71,4 +87,9 @@ class Simulator:
         plt.xlabel("Arrival Time")
         plt.ylabel("Flow Size")
         plt.title("Flow Arrival Times and Sizes")
-        plt.show()
+
+       # Save the plot to the graph folder (scatter plot)
+        filename = self.graphs_dir / f"{self.graph_prefix}_scatter.png"
+        plt.savefig(filename)
+        plt.close()
+        print(f"Saved flow scatter plot to {filename}")
