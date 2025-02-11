@@ -1,5 +1,6 @@
 from traffic_simulator.models import Flow
 
+
 class Port:
     id: int
     max_capacity: float
@@ -10,7 +11,13 @@ class Port:
     current_flows_in_time_window: list[Flow]
     time_window_duration: float = 0.0
 
-    def __init__(self, id: int, max_capacity: float, time_window_duration: float, target_utilization: float):
+    def __init__(
+        self,
+        id: int,
+        max_capacity: float,
+        time_window_duration: float,
+        target_utilization: float,
+    ):
         self.id = id
         self.max_capacity = max_capacity
         self.buffer = []
@@ -25,8 +32,9 @@ class Port:
 
         total_time = 0.0
         for flow in self.current_flows_in_time_window:
-
-            total_time += min(flow.processing_end_time, current_time) - max(flow.processing_start_time, current_time - self.time_window_duration)
+            total_time += min(flow.processing_end_time, current_time) - max(
+                flow.processing_start_time, current_time - self.time_window_duration
+            )
 
         return total_time / min(self.time_window_duration, current_time)
 
@@ -36,7 +44,8 @@ class Port:
     def update_flows(self, current_time: float) -> None:
         # Step 1: Remove expired flows
         self.current_flows_in_time_window = [
-            flow for flow in self.current_flows_in_time_window
+            flow
+            for flow in self.current_flows_in_time_window
             if flow.processing_end_time > current_time - self.time_window_duration
         ]
 
@@ -46,13 +55,21 @@ class Port:
 
             # next start time is earliest possible time
             next_start_time = flow.arrival_time
-            if self.current_flows_in_time_window and self.current_flows_in_time_window[-1].processing_end_time > flow.arrival_time:
-                next_start_time = self.current_flows_in_time_window[-1].processing_end_time
+            if (
+                self.current_flows_in_time_window
+                and self.current_flows_in_time_window[-1].processing_end_time
+                > flow.arrival_time
+            ):
+                next_start_time = self.current_flows_in_time_window[
+                    -1
+                ].processing_end_time
 
             if next_start_time < current_time:
-              flow.processing_start_time = next_start_time
-              flow.processing_end_time = flow.processing_start_time + (flow.flow_size / self.max_capacity)
-              self.current_flows_in_time_window.append(flow)
-              self.buffer.pop(0)
+                flow.processing_start_time = next_start_time
+                flow.processing_end_time = flow.processing_start_time + (
+                    flow.flow_size / self.max_capacity
+                )
+                self.current_flows_in_time_window.append(flow)
+                self.buffer.pop(0)
             else:
                 break

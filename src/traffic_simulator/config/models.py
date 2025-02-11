@@ -31,13 +31,13 @@ class LinkConfig(BaseModel):
         if v <= 0:
             raise ValueError("Value must be positive")
         return v
-    
+
     @field_validator("time_window_duration")
     def validate_positive(cls, v):
         if v <= 0:
             raise ValueError("Value must be positive")
         return v
-    
+
     @field_validator("target_utilization")
     def validate_positive(cls, v):
         if v < 0 or v > 1.0:
@@ -46,6 +46,7 @@ class LinkConfig(BaseModel):
 
 
 class NetworkConfig(BaseModel):
+    strategy: Literal["ecmp", "wcmp", "least_congested"]
     links: List[LinkConfig]
 
 

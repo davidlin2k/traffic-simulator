@@ -1,12 +1,13 @@
 version: "1.0"
 
 simulation:
-  duration: 10.0
+  duration: 200.0
   logging:
     level: "INFO"
     file: "simulation.log"
 
 network:
+  strategy: "least_congested"
   links:
     - id: "link1"
       capacity: 10240

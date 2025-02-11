@@ -33,12 +33,14 @@ class WeightedPortAssigner(PortAssigner):
         assigned = random.choices(self.ports, weights=self.weights, k=1)[0]
         flow.assigned_port = assigned.id
         return assigned
-    
+
+
 class InOrderPortAssigner(PortAssigner):
     index: int = 0
     """
     Distributes flows in order equally among links.
     """
+
     def __init__(self, ports: list[Port]):
         self.ports = ports
 
@@ -47,7 +49,8 @@ class InOrderPortAssigner(PortAssigner):
         flow.assigned_port = assigned.id
         self.index = (self.index + 1) % len(self.ports)
         return assigned
-    
+
+
 class LeastMSEPortAssigner(PortAssigner):
     def __init__(self, ports: list[Port]):
         self.ports = ports
@@ -56,9 +59,13 @@ class LeastMSEPortAssigner(PortAssigner):
         # Find the port with the greatest deficit (target utilization - current utilization)
         assigned = max(
             self.ports,
-            key=lambda port: max(0, port.target_utilization - port.get_current_utilization(flow.arrival_time))
+            key=lambda port: max(
+                0,
+                port.target_utilization
+                - port.get_current_utilization(flow.arrival_time),
+            ),
         )
-        
+
         # Assign the flow to the most underutilized port
         flow.assigned_port = assigned.id
         return assigned
