@@ -62,7 +62,6 @@ class FlowSizeGeneratorFactory:
             return QuantileFlowSizeGenerator(distribution)
 
         elif config.traffic.flow_size.type == "uniform":
-
             return UniformFlowSizeGenerator(
                 min_flow_size=config.traffic.flow_size.params["min_flow_size"],
                 max_flow_size=config.traffic.flow_size.params["max_flow_size"],

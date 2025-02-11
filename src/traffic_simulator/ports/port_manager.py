@@ -2,6 +2,7 @@ from traffic_simulator.models import Flow
 from traffic_simulator.ports.port_assigner import PortAssigner
 from traffic_simulator.ports.port import Port
 
+
 class PortManager:
     def __init__(self, ports: list[Port], port_assigner: PortAssigner):
         self.ports = ports
