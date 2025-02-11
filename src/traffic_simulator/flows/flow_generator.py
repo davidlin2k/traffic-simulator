@@ -9,7 +9,7 @@ from traffic_simulator.models import Flow
 class FlowGenerator(ABC):
     def __init__(self, flow_size_generator: FlowSizeGenerator):
         self.flow_size_generator = flow_size_generator
-        self.all_flows = []
+        self.all_flows: list[Flow] = []
 
     @abstractmethod
     def generate_flows(self, current_time: float, end_time: float) -> Iterator[Flow]:

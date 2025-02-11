@@ -55,7 +55,8 @@ class LinkVisualizer:
 
         # Save if path provided
         if save_path:
-            plt.savefig(save_path, bbox_inches="tight", dpi=300)
+            file_path = save_path + "/utilization.png"
+            plt.savefig(file_path, bbox_inches="tight", dpi=300)
 
         return fig, ax
 

@@ -1,4 +1,5 @@
 import click
+import pathlib
 
 from traffic_simulator.config.config_loader import load_config
 from traffic_simulator.flows.flow_generator import PoissonFlowGenerator
@@ -15,7 +16,17 @@ from traffic_simulator.simulator.simulator import Simulator
     default="config.yaml",
     help="Path to the YAML configuration file",
 )
-def cli(config: str):
+@click.option(
+    "--output",
+    type=click.Path(),
+    default="output",
+    help="Path to the output directory",
+)
+def cli(config: str, output: str):
+    # Create the output directory if it does not exist
+    pathlib.Path(output).mkdir(parents=True, exist_ok=True)
+
+    # Load the configuration file
     sim_config = load_config(config)
 
     flow_size_generator = FlowSizeGeneratorFactory.create_generator(sim_config)
@@ -38,3 +49,4 @@ def cli(config: str):
         links=links,
     )
     simulator.run()
+    simulator.visualize(save_path=output)
