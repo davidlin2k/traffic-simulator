@@ -4,16 +4,26 @@ from typing import Deque, List, Tuple
 
 
 class Link:
+    LINK_UTILIZATION = "Link Utilization"
+    BUFFER_OCCUPANCY = "Buffer Occupancy"
+
     def __init__(self, capacity_bps: float):
         self.capacity_bps = capacity_bps  # Link capacity in bits per second
         self.queue: Deque[Flow] = collections.deque()  # Infinite buffer queue
 
         self.busy_until: float = 0.0  # Time until current transmission completes
-        # Instead of cumulative busy time, store busy intervals as tuples (start_time, end_time)
-        self.busy_intervals: List[Tuple[float, float]] = []
+        self.flows: List[Flow] = []
 
-        # Sampling parameters for recording utilization over time
+        # Sampling parameters for recording stats (utilization and buffer occupancy) over time
+
+        self.stats_keys = {
+            self.LINK_UTILIZATION : "utilization_samples", 
+            self.BUFFER_OCCUPANCY : "buffer_occupancy_samples"
+        }
+
         self.utilization_samples: List[Tuple[float, float]] = []
+        self.buffer_occupancy_samples: List[Tuple[float, float]] = []
+
         self.last_sample_time: float = 0.0
         self.sample_interval: float = 0.1  # Sample every 100ms
 
@@ -37,7 +47,9 @@ class Link:
 
         # Update the link's busy state and record the busy interval.
         self.busy_until = flow.end_time
-        self.busy_intervals.append((flow.start_time, flow.end_time))
+
+        self.flows.append(flow)
+
         self.queue.append(flow)
         return flow.end_time
 
@@ -50,62 +62,72 @@ class Link:
             return self.queue.popleft()
         return None
 
-    def get_utilization(self, current_time: float, start_time: float = 0.0) -> float:
+    def get_stats(self, current_time: float, start_time: float = 0.0) -> dict[str, float]:
         """
         Calculate the link utilization (fraction of time busy) over the interval
         from start_time to current_time.
         This is computed by summing the overlaps between the busy intervals and
         the period [start_time, current_time].
         """
+        if start_time >= current_time:
+            return {key: 0.0 for key, _ in self.stats_keys.items()}
+
         total_busy = 0.0
-        interval_length = current_time - start_time
-
-        # Sum the portions of each busy interval that overlap with the sample period.
-        for busy_start, busy_end in self.busy_intervals:
-            # Find the overlap between [busy_start, busy_end] and [start_time, current_time]
-            overlap_start = max(busy_start, start_time)
-            overlap_end = min(busy_end, current_time)
-            if overlap_start < overlap_end:
-                total_busy += overlap_end - overlap_start
-
-        return total_busy / interval_length if interval_length > 0 else 0.0
-
-    def get_utilization(self, current_time: float, start_time: float = 0.0) -> float:
-        """
-        Calculate the link utilization (fraction of time busy) over the interval
-        from start_time to current_time.
-        This is computed by summing the overlaps between the busy intervals and
-        the period [start_time, current_time].
-        """
-        total_busy = 0.0
+        buffer_occupancy = 0.0
         interval_length = current_time - start_time
 
         # Sum the portions of each busy interval that overlap with the period.
-        for busy_start, busy_end in self.busy_intervals:
+        for flow in self.flows:
+            busy_start = flow.start_time
+            busy_end = flow.end_time
+            arrival = flow.arrival_time
+            
             # If the busy interval occurs completely before the start, skip it.
             if busy_end <= start_time:
                 continue
 
-            # If the busy interval starts after current_time, we can break out.
-            if busy_start >= current_time:
+            # If the flow arrived after current time, we can break out.
+            if arrival >= current_time:
                 break
 
-            # Determine the overlapping segment.
-            overlap_start = max(busy_start, start_time)
-            overlap_end = min(busy_end, current_time)
-            if overlap_start < overlap_end:
-                total_busy += overlap_end - overlap_start
+            # Only add to total_busy if the busy interval starts before current_time.
+            if busy_start < current_time:
+                # Determine the overlapping segment.
+                overlap_start = max(busy_start, start_time)
+                overlap_end = min(busy_end, current_time)
+                if overlap_start < overlap_end:
+                    total_busy += overlap_end - overlap_start
+                
+            # Only add to buffer occupancy if the flow is not already fully processed
+            if busy_end > current_time:
+                if busy_start < current_time:
+                    # The flow has been partially processed so must minus that amount from buffer_occupancy
+                    buffer_occupancy += flow.flow_size - (current_time - busy_start) * self.capacity_bps
+                else:
+                    # This flow has not yet started processing so can just add the full flow size
+                    buffer_occupancy += flow.flow_size
 
-        return total_busy / interval_length if interval_length > 0 else 0.0
+        utilization = total_busy / interval_length
+        stats = {
+            self.LINK_UTILIZATION : utilization,
+            self.BUFFER_OCCUPANCY : buffer_occupancy
+        }
 
-    def get_overall_utilization(self, current_time: float) -> float:
+        return stats
+
+    def get_overall_stats(self, current_time: float) -> dict[str, List[Tuple[float, float]]]:
         """
-        Calculate the overall link utilization from time 0 up to current_time.
+        Calculate the overall stats (link utilization and buffer occupancy) from time 0 up to current_time.
         """
         # Sample utilization at regular intervals
         while self.last_sample_time < current_time:
-            utilization = self.get_utilization(self.last_sample_time, 0)
-            self.utilization_samples.append((self.last_sample_time, utilization))
+            stats = self.get_stats(self.last_sample_time, 0)
+
+            for key, attr_name in self.stats_keys.items():
+                getattr(self, attr_name).append((self.last_sample_time, stats[key]))
+            
             self.last_sample_time += self.sample_interval
 
-        return self.utilization_samples
+        # Construct the return dictionary dynamically using `stats_keys`
+        stats_dict = {key: getattr(self, attr_name) for key, attr_name in self.stats_keys.items()}
+        return stats_dict

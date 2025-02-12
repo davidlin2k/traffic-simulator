@@ -21,7 +21,6 @@ class LinkVisualizer:
             window: Optional time window (start_time, end_time) to plot
             fig_size: Figure size in inches (width, height)
             save_path: Optional path to save the figure
-            show_average: Whether to show moving average
         """
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
@@ -56,6 +55,59 @@ class LinkVisualizer:
         # Save if path provided
         if save_path:
             file_path = save_path + "/utilization.png"
+            plt.savefig(file_path, bbox_inches="tight", dpi=300)
+
+        return fig, ax
+    
+    def plot_buffer_occupancy(
+        self,
+        links: list[Link],
+        window: Optional[Tuple[float, float]] = None,
+        fig_size: Tuple[int, int] = (12, 6),
+        save_path: Optional[str] = None,
+    ):
+        """
+        Plot buffer occupancy over time.
+
+        Args:
+            links: List of Link objects with utilization samples
+            window: Optional time window (start_time, end_time) to plot
+            fig_size: Figure size in inches (width, height)
+            save_path: Optional path to save the figure
+        """
+        fig, ax = plt.subplots(figsize=fig_size)
+        # Plot each link
+        for i, link in enumerate(links):
+            times, occupancies = zip(*link.buffer_occupancy_samples)
+            times = np.array(times)
+            occupancies = np.array(occupancies)
+
+            # Filter by time window if specified
+            if window:
+                start_time, end_time = window
+                mask = (times >= start_time) & (times <= end_time)
+                times = times[mask]
+                occupancies = occupancies[mask]
+
+            # Plot buffer occupancies
+            ax.plot(times, occupancies, alpha=0.5, label=f"Link {i + 1}")
+
+        # Customize plot
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Buffer Occupancy")
+        ax.set_title("Buffer Occupancy Over Time")
+        ax.grid(True, linestyle="--", alpha=0.7)
+        # ax.set_ylim(0, 100)
+
+        # Add legend
+        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+
+        # Adjust layout to prevent label cutoff
+        plt.tight_layout()
+
+        # Save if path provided
+        if save_path:
+            file_path = save_path + "/buffer_occupancy.png"
             plt.savefig(file_path, bbox_inches="tight", dpi=300)
 
         return fig, ax
