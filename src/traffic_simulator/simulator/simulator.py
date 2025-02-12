@@ -11,6 +11,10 @@ from traffic_simulator.models.event import (
     FlowCompletionEvent,
 )
 from traffic_simulator.simulator.visualizer import LinkVisualizer
+from typing import List
+from traffic_simulator.config.models import LinkConfig
+from traffic_simulator.metrics.mse import calculate_mse, calculate_per_link_errors 
+
 
 
 class Simulator:
@@ -20,6 +24,7 @@ class Simulator:
         flow_generator: FlowGenerator,
         strategy: LoadBalanceStrategy,
         links: list[Link],
+        link_configs: List[LinkConfig],
     ):
         """
         duration: total simulation time.
@@ -30,10 +35,22 @@ class Simulator:
         self.flow_generator = flow_generator
         self.strategy = strategy
         self.links = links
+        self.link_configs = link_configs
+
+        # Initialize MSE tracking
+        self.mse_samples = []
+        self.mse_timestamps = []
+        self.sample_interval = 1.0
 
         # Initialize simulation state
         self._time = 0.0
         self._events: list[Event] = []
+    
+    def _sample_mse(self):
+        """Sample and store current MSE value"""
+        mse = calculate_mse(self.links, self.link_configs, self._time)
+        self.mse_samples.append(mse)
+        self.mse_timestamps.append(self._time)
 
     def run(self):
         # Generate initial events
@@ -48,6 +65,10 @@ class Simulator:
                 self._process_packet_arrival(event)
             elif isinstance(event, FlowCompletionEvent):
                 self._process_packet_completion(event)
+
+            # Sample MSE at regular intervals
+            if not self.mse_timestamps or (self._time - self.mse_timestamps[-1]) >= self.sample_interval:
+                self._sample_mse()
 
         self._sample_link_utilizations()
         self.visualize()
@@ -90,7 +111,41 @@ class Simulator:
         link_visualizer.plot_utilization(self.links, save_path=save_path)
 
         self._visualize_flows_scatter(save_path)
+
+        # Add MSE visualization
+        self._visualize_mse(save_path)
         
+        # Add per-link error visualization
+        self._visualize_per_link_errors(save_path)
+
+    def _visualize_mse(self, save_path: str = None):
+        """Plot MSE over time"""
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.mse_timestamps, self.mse_samples)
+        plt.xlabel("Time (seconds)")
+        plt.ylabel("Mean Square Error")
+        plt.title("Link Utilization Mean Square Error Over Time")
+        plt.grid(True)
+
+        if save_path:
+            plt.savefig(Path(save_path) / "mse.png", bbox_inches="tight", dpi=300)
+    
+    def _visualize_per_link_errors(self, save_path: str = None):
+        """Plot squared errors for each link"""
+        final_errors = calculate_per_link_errors(self.links, self.link_configs, self._time)
+        
+        plt.figure(figsize=(10, 6))
+        links = list(final_errors.keys())
+        errors = list(final_errors.values())
+        
+        plt.bar(links, errors)
+        plt.xlabel("Link ID")
+        plt.ylabel("Squared Error")
+        plt.title("Final Squared Error per Link")
+        
+        if save_path:
+            plt.savefig(Path(save_path) / "per_link_errors.png", bbox_inches="tight", dpi=300)
+            
     def _visualize_flows_scatter(self, save_path: str = None):
         arrival_times = [flow.arrival_time for flow in self.flow_generator.all_flows]
         flow_sizes = [flow.flow_size for flow in self.flow_generator.all_flows]
