@@ -94,7 +94,7 @@ class LinkVisualizer:
 
         # Customize plot
         ax.set_xlabel("Time (seconds)")
-        ax.set_ylabel("Buffer Occupancy")
+        ax.set_ylabel("Buffer Occupancy (Bits)")
         ax.set_title("Buffer Occupancy Over Time")
         ax.grid(True, linestyle="--", alpha=0.7)
         # ax.set_ylim(0, 100)

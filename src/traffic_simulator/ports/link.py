@@ -16,11 +16,13 @@ class Link:
 
         # Sampling parameters for recording stats (utilization and buffer occupancy) over time
 
+        # To store the attribute names of the samples we want to get stats for
         self.stats_keys = {
             self.LINK_UTILIZATION : "utilization_samples", 
             self.BUFFER_OCCUPANCY : "buffer_occupancy_samples"
         }
 
+        # The samples we want to get stats for
         self.utilization_samples: List[Tuple[float, float]] = []
         self.buffer_occupancy_samples: List[Tuple[float, float]] = []
 
@@ -31,7 +33,7 @@ class Link:
         """
         Enqueue a flow (packet) and schedule its transmission.
         The flow's start and end times are determined based on the link's current busy state.
-        Also, record the busy interval.
+        Also, record the flow to get the stats at end of simulation.
         Returns the scheduled end_time (i.e. when transmission completes).
         """
         transmission_time = flow.flow_size / self.capacity_bps
@@ -64,10 +66,14 @@ class Link:
 
     def get_stats(self, current_time: float, start_time: float = 0.0) -> dict[str, float]:
         """
+        Get the stats:
+
         Calculate the link utilization (fraction of time busy) over the interval
         from start_time to current_time.
         This is computed by summing the overlaps between the busy intervals and
         the period [start_time, current_time].
+
+        Calculate the buffer occupancy (sum of all flow sizes in buffer) at current_time.
         """
         if start_time >= current_time:
             return {key: 0.0 for key, _ in self.stats_keys.items()}
