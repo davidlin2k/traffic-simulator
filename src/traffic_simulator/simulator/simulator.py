@@ -66,9 +66,10 @@ class Simulator:
             elif isinstance(event, FlowCompletionEvent):
                 self._process_packet_completion(event)
 
-            # Sample MSE at regular intervals
-            if not self.mse_timestamps or (self._time - self.mse_timestamps[-1]) >= self.sample_interval:
-                self._sample_mse()
+        self._sample_stats()
+        # Sample MSE at regular intervals
+        if not self.mse_timestamps or (self._time - self.mse_timestamps[-1]) >= self.sample_interval:
+            self._sample_mse()
 
         self._sample_link_utilizations()
         self.visualize()
@@ -101,14 +102,15 @@ class Simulator:
         link = event.link
         link.dequeue_flow(self._time)
 
-    def _sample_link_utilizations(self):
-        # Sample link utilizations
+    def _sample_stats(self):
+        # Sample link utilizations and buffer occupancy
         for link in self.links:
-            link.get_overall_utilization(self._time)
+            link.get_overall_stats(self._time)
 
     def visualize(self, save_path: str = None):
         link_visualizer = LinkVisualizer()
         link_visualizer.plot_utilization(self.links, save_path=save_path)
+        link_visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
 
         self._visualize_flows_scatter(save_path)
 
