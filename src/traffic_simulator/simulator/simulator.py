@@ -61,17 +61,14 @@ class Simulator:
             event = heapq.heappop(self._events)
             self._time = event.time
 
+            self._sample_stats()
+
             if isinstance(event, FlowArrivalEvent):
                 self._process_packet_arrival(event)
             elif isinstance(event, FlowCompletionEvent):
                 self._process_packet_completion(event)
 
         self._sample_stats()
-        # Sample MSE at regular intervals
-        if not self.mse_timestamps or (self._time - self.mse_timestamps[-1]) >= self.sample_interval:
-            self._sample_mse()
-
-        self._sample_link_utilizations()
         self.visualize()
         self._visualize_flows_scatter()
 
@@ -105,7 +102,8 @@ class Simulator:
     def _sample_stats(self):
         # Sample link utilizations and buffer occupancy
         for link in self.links:
-            link.get_overall_stats(self._time)
+            link.sample_metrics(self._time)
+        self._sample_mse()
 
     def visualize(self, save_path: str = None):
         link_visualizer = LinkVisualizer()

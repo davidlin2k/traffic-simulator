@@ -25,7 +25,7 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            times, utils = zip(*link.utilization_samples)
+            times, utils = zip(*link.metrics.utilization_samples)
             times = np.array(times)
             utils = np.array(utils)
 
@@ -78,7 +78,7 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            times, occupancies = zip(*link.buffer_occupancy_samples)
+            times, occupancies = zip(*link.metrics.buffer_occupancy_samples)
             times = np.array(times)
             occupancies = np.array(occupancies)
 

@@ -1,7 +1,8 @@
 import collections
-from traffic_simulator.models.flow import Flow
 from typing import Deque, List, Tuple
 
+from traffic_simulator.models.flow import Flow
+from traffic_simulator.models.link_metrics import LinkMetrics
 
 class Link:
     LINK_UTILIZATION = "Link Utilization"
@@ -14,20 +15,7 @@ class Link:
         self.busy_until: float = 0.0  # Time until current transmission completes
         self.flows: List[Flow] = []
 
-        # Sampling parameters for recording stats (utilization and buffer occupancy) over time
-
-        # To store the attribute names of the samples we want to get stats for
-        self.stats_keys = {
-            self.LINK_UTILIZATION : "utilization_samples", 
-            self.BUFFER_OCCUPANCY : "buffer_occupancy_samples"
-        }
-
-        # The samples we want to get stats for
-        self.utilization_samples: List[Tuple[float, float]] = []
-        self.buffer_occupancy_samples: List[Tuple[float, float]] = []
-
-        self.last_sample_time: float = 0.0
-        self.sample_interval: float = 0.1  # Sample every 100ms
+        self.metrics = LinkMetrics()
 
     def enqueue_flow(self, flow: Flow, current_time: float) -> float:
         """
@@ -51,8 +39,8 @@ class Link:
         self.busy_until = flow.end_time
 
         self.flows.append(flow)
-
         self.queue.append(flow)
+
         return flow.end_time
 
     def dequeue_flow(self, current_time: float):
@@ -64,76 +52,50 @@ class Link:
             return self.queue.popleft()
         return None
 
-    def get_stats(self, current_time: float, start_time: float = 0.0) -> dict[str, float]:
-        """
-        Get the stats:
+    def _get_remaining_flow_size(self, flow: Flow, current_time: float) -> float:
+        """Calculates remaining flow size"""
+        if flow.start_time >= current_time:
+            return flow.flow_size
+        return flow.flow_size - (current_time - flow.start_time) * self.capacity_bps
 
-        Calculate the link utilization (fraction of time busy) over the interval
-        from start_time to current_time.
-        This is computed by summing the overlaps between the busy intervals and
-        the period [start_time, current_time].
+    def _calculate_buffer_occupancy(self, current_time: float) -> float:
+        """Calculates current buffer occupancy"""
+        return sum(
+            self._get_remaining_flow_size(flow, current_time)
+            for flow in self.queue
+            if flow.end_time > current_time
+        )
 
-        Calculate the buffer occupancy (sum of all flow sizes in buffer) at current_time.
-        """
+    def _calculate_utilization(self, current_time: float, start_time: float = 0.0) -> float:
+        """Calculates link utilization"""
         if start_time >= current_time:
-            return {key: 0.0 for key, _ in self.stats_keys.items()}
+            return 0.0
 
-        total_busy = 0.0
-        buffer_occupancy = 0.0
-        interval_length = current_time - start_time
-
-        # Sum the portions of each busy interval that overlap with the period.
-        for flow in self.flows:
-            busy_start = flow.start_time
-            busy_end = flow.end_time
-            arrival = flow.arrival_time
-            
-            # If the busy interval occurs completely before the start, skip it.
-            if busy_end <= start_time:
-                continue
-
-            # If the flow arrived after current time, we can break out.
-            if arrival >= current_time:
-                break
-
-            # Only add to total_busy if the busy interval starts before current_time.
-            if busy_start < current_time:
-                # Determine the overlapping segment.
-                overlap_start = max(busy_start, start_time)
-                overlap_end = min(busy_end, current_time)
-                if overlap_start < overlap_end:
-                    total_busy += overlap_end - overlap_start
-                
-            # Only add to buffer occupancy if the flow is not already fully processed
-            if busy_end > current_time:
-                if busy_start < current_time:
-                    # The flow has been partially processed so must minus that amount from buffer_occupancy
-                    buffer_occupancy += flow.flow_size - (current_time - busy_start) * self.capacity_bps
-                else:
-                    # This flow has not yet started processing so can just add the full flow size
-                    buffer_occupancy += flow.flow_size
-
-        utilization = total_busy / interval_length
-        stats = {
-            self.LINK_UTILIZATION : utilization,
-            self.BUFFER_OCCUPANCY : buffer_occupancy
+        total_busy = sum(
+            min(flow.end_time, current_time) - max(flow.start_time, start_time)
+            for flow in self.flows
+            if flow.end_time > start_time and flow.start_time < current_time
+        )
+        
+        return total_busy / (current_time - start_time)
+    
+    def get_current_metrics(self, current_time: float) -> dict[str, float]:
+        """Returns current link metrics"""
+        return {
+            self.LINK_UTILIZATION: self._calculate_utilization(current_time),
+            self.BUFFER_OCCUPANCY: self._calculate_buffer_occupancy(current_time)
         }
-
-        return stats
-
-    def get_overall_stats(self, current_time: float) -> dict[str, List[Tuple[float, float]]]:
-        """
-        Calculate the overall stats (link utilization and buffer occupancy) from time 0 up to current_time.
-        """
-        # Sample utilization at regular intervals
-        while self.last_sample_time < current_time:
-            stats = self.get_stats(self.last_sample_time, 0)
-
-            for key, attr_name in self.stats_keys.items():
-                getattr(self, attr_name).append((self.last_sample_time, stats[key]))
+    
+    def sample_metrics(self, current_time: float) -> None:
+        """Samples and stores metrics at regular intervals"""
+        while self.metrics.last_sample_time < current_time:
+            current_metrics = self.get_current_metrics(self.metrics.last_sample_time)
             
-            self.last_sample_time += self.sample_interval
-
-        # Construct the return dictionary dynamically using `stats_keys`
-        stats_dict = {key: getattr(self, attr_name) for key, attr_name in self.stats_keys.items()}
-        return stats_dict
+            self.metrics.utilization_samples.append(
+                (self.metrics.last_sample_time, current_metrics[self.LINK_UTILIZATION])
+            )
+            self.metrics.buffer_occupancy_samples.append(
+                (self.metrics.last_sample_time, current_metrics[self.BUFFER_OCCUPANCY])
+            )
+            
+            self.metrics.last_sample_time += self.metrics.sample_interval

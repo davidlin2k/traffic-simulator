@@ -19,7 +19,7 @@ def calculate_mse(links: List[Link], link_configs: List[LinkConfig], current_tim
     
     for link, config in zip(links, link_configs):
         # Get actual utilization for the link
-        actual_utilization = link.get_utilization(current_time)
+        actual_utilization = link.metrics.utilization_samples[-1][1]
         target_utilization = config.target_utilization
         
         # Calculate squared error
@@ -45,7 +45,7 @@ def calculate_per_link_errors(links: List[Link], link_configs: List[LinkConfig],
     errors = {}
     
     for link, config in zip(links, link_configs):
-        actual_utilization = link.get_utilization(current_time)
+        actual_utilization = link.metrics.utilization_samples[-1][1]
         target_utilization = config.target_utilization
         
         error = actual_utilization - target_utilization
