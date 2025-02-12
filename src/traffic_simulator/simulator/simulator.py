@@ -5,7 +5,7 @@ import heapq
 from traffic_simulator.flows.flow_generator import FlowGenerator
 from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import LoadBalanceStrategy
-from traffic_simulator.simulator.event import (
+from traffic_simulator.models.event import (
     Event,
     FlowArrivalEvent,
     FlowCompletionEvent,
