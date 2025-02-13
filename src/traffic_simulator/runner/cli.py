@@ -37,7 +37,9 @@ def cli(config: str, output: str):
     )
 
     links = [Link(capacity_bps=link.capacity) for link in sim_config.network.links]
-    links_metric_tracker = LinkMetricsTracker(sim_config.simulation.metrics.sample_interval)
+    links_metric_tracker = LinkMetricsTracker(
+        sim_config.simulation.metrics.sample_interval
+    )
     for link in links:
         links_metric_tracker.register_link(link)
 

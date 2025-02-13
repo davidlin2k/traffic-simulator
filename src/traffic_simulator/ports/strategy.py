@@ -40,37 +40,56 @@ class LeastCongestedStrategy(LoadBalanceStrategy):
 
 
 class MostUnderTargetStrategy(LoadBalanceStrategy):
-    def __init__(self, links: list[Link], link_metric_tracker: LinkMetricsTracker, config: MainConfig):
+    def __init__(
+        self,
+        links: list[Link],
+        link_metric_tracker: LinkMetricsTracker,
+        config: MainConfig,
+    ):
         super().__init__(links)
         self.link_metric_tracker = link_metric_tracker
         self.config = config
-        
+
+    def _get_utilization_gap(self, link: Link, link_config) -> float:
+        """Calculate how far a link is below its target utilization."""
+        samples = self.link_metric_tracker.get_link_metric_samples(
+            link, "link_utilization"
+        )
+        if not samples:
+            return float("-inf")
+
+        current_utilization = samples[-1][1]
+        return link_config.target_utilization - current_utilization
+
+    def _find_most_underutilized_link(self) -> Link | None:
+        """Find the link with the largest positive gap to its target utilization."""
+        utilization_gaps = [
+            (link, self._get_utilization_gap(link, link_config))
+            for link, link_config in zip(self.links, self.config.network.links)
+        ]
+
+        valid_gaps = [(link, gap) for link, gap in utilization_gaps if gap > 0]
+        if not valid_gaps:
+            return None
+
+        return max(valid_gaps, key=lambda x: x[1])[0]
+
     def select_link(self) -> Link:
-        # Choose the link that is most under its target utilization, otherwise choose the least congested link
-        least_utilized_link = None
-        least_utilized_diff = float("inf")
-        
-        for i in range(len(self.config.network.links)):
-            link = self.links[i]
-            samples = self.link_metric_tracker.get_link_metric_samples(link, "link_utilization")
-            if not samples:
-                continue
-            actual_utilization = samples[-1][1]
-            target_utilization = self.config.network.links[i].target_utilization
-            diff = target_utilization - actual_utilization
-            if diff > 0 and diff < least_utilized_diff:
-                least_utilized_diff = diff
-                least_utilized_link = link
-            
-        if least_utilized_link:
-            return least_utilized_link
-        else:
-            return min(self.config.network.links, key=lambda link: link.busy_until)
-    
+        """Choose the link most below its target utilization, or least congested if none are under target."""
+        most_underutilized = self._find_most_underutilized_link()
+        if most_underutilized:
+            return most_underutilized
+
+        return min(self.links, key=lambda link: link.busy_until)
+
+
 class StrategyFactory:
     @staticmethod
     def create_strategy(
-        strategy_name: str, links: list[Link], config: MainConfig, link_metric_tracker: LinkMetricsTracker
+        strategy_name: str,
+        links: list[Link],
+        config: MainConfig,
+        link_metric_tracker: LinkMetricsTracker,
     ) -> LoadBalanceStrategy:
         if strategy_name == "ecmp":
             return ECMPStrategy(links)

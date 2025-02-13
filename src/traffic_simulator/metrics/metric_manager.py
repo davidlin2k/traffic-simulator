@@ -1,7 +1,12 @@
 from typing import Any
 
 from traffic_simulator.ports.link import Link
-from traffic_simulator.metrics.metric_collector import BufferOccupancyCollector, FlowCompletionTimeCollector, MetricCollector, UtilizationCollector
+from traffic_simulator.metrics.metric_collector import (
+    BufferOccupancyCollector,
+    FlowCompletionTimeCollector,
+    MetricCollector,
+    UtilizationCollector,
+)
 
 
 class MetricsManager:
@@ -18,6 +23,7 @@ class MetricsManager:
             value = collector.collect(link, timestamp)
             self.samples[collector.name].append((timestamp, value))
 
+
 class LinkMetricsTracker:
     def __init__(self, sample_interval: float = 1.0):
         self.sample_interval = sample_interval
@@ -30,7 +36,7 @@ class LinkMetricsTracker:
         metrics_manager.register(UtilizationCollector())
         metrics_manager.register(BufferOccupancyCollector())
         metrics_manager.register(FlowCompletionTimeCollector())
-        
+
         self.link_metrics[link] = metrics_manager
         self.last_sample_times[link] = 0.0
 
@@ -48,4 +54,3 @@ class LinkMetricsTracker:
         if link in self.link_metrics:
             return self.link_metrics[link].samples.get(metric_name, [])
         return []
-    

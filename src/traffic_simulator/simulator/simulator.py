@@ -18,6 +18,7 @@ from traffic_simulator.metrics.mse import calculate_mse, calculate_per_link_erro
 
 import logging
 
+
 class Simulator:
     def __init__(
         self,
@@ -50,14 +51,11 @@ class Simulator:
 
         self.metrics_tracker = link_metric_tracker
         self.visualizer = LinkVisualizer(self.metrics_tracker)
-        
+
     def _sample_mse(self):
         """Sample and store current MSE value"""
         mse = calculate_mse(
-            self.metrics_tracker,
-            self.links,
-            self.link_configs,
-            self._time
+            self.metrics_tracker, self.links, self.link_configs, self._time
         )
         self.mse_samples.append(mse)
         self.mse_timestamps.append(self._time)
@@ -65,7 +63,7 @@ class Simulator:
     def run(self):
         # Generate initial events
         self._generate_flow_events()
-    
+
         while self._events:
             # Get the next event
             event = heapq.heappop(self._events)
@@ -145,10 +143,7 @@ class Simulator:
     def _visualize_per_link_errors(self, save_path: str = None):
         """Plot squared errors for each link"""
         final_errors = calculate_per_link_errors(
-            self.metrics_tracker,
-            self.links,
-            self.link_configs,
-            self._time
+            self.metrics_tracker, self.links, self.link_configs, self._time
         )
 
         plt.figure(figsize=(10, 6))

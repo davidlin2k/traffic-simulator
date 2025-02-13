@@ -29,7 +29,9 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            samples = self.metrics_tracker.get_link_metric_samples(link, "link_utilization")
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "link_utilization"
+            )
             if not samples:
                 continue
 
@@ -86,10 +88,12 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            samples = self.metrics_tracker.get_link_metric_samples(link, "buffer_occupancy")
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "buffer_occupancy"
+            )
             if not samples:
                 continue
-               
+
             times, occupancies = zip(*samples)
             times = np.array(times)
             occupancies = np.array(occupancies)
@@ -143,9 +147,11 @@ class LinkVisualizer:
         # Prepare data
         all_times = set()
         for link in links:
-            samples = self.metrics_tracker.get_link_metric_samples(link, "link_utilization")
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "link_utilization"
+            )
             all_times.update(t for t, _ in samples)
-        
+
         times = sorted(all_times)
 
         # Filter by time window
@@ -214,10 +220,12 @@ class LinkVisualizer:
         all_utils = []
         labels = []
         for i, link in enumerate(links):
-            samples = self.metrics_tracker.get_link_metric_samples(link, "flow_completion_time")
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "flow_completion_time"
+            )
             if not samples:
                 continue
-             
+
             utils = [u for t, u in link.utilization_samples]
             if window:
                 start_time, end_time = window
@@ -261,10 +269,12 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            samples = self.metrics_tracker.get_link_metric_samples(link, "flow_completion_time")
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "flow_completion_time"
+            )
             if not samples:
                 continue
-            
+
             times, occupancies = zip(*samples)
             times = np.array(times)
             occupancies = np.array(occupancies)

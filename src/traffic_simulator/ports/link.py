@@ -49,10 +49,9 @@ class Link:
             return flow
 
         return None
-    
+
     def _get_remaining_flow_size(self, flow: Flow, current_time: float) -> float:
         """Calculates remaining flow size"""
         if flow.start_time >= current_time:
             return flow.flow_size
         return flow.flow_size - (current_time - flow.start_time) * self.capacity_bps
-

@@ -70,7 +70,7 @@ def calculate_per_link_errors(
         if not samples:
             errors[config.id] = 0.0
             continue
-            
+
         actual_utilization = samples[-1][1]  # Get latest sample
         target_utilization = config.target_utilization
 
