@@ -14,7 +14,7 @@ from traffic_simulator.simulator.simulator import Simulator
 @click.option(
     "--config",
     type=click.Path(exists=True),
-    default="config.yaml",
+    default="configs/config.yaml",
     help="Path to the YAML configuration file",
 )
 @click.option(
