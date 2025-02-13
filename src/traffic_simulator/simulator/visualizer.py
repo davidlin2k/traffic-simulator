@@ -25,7 +25,7 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            times, utils = zip(*link.metrics.utilization_samples)
+            times, utils = zip(*link.get_metric_samples("link_utilization"))
             times = np.array(times)
             utils = np.array(utils)
 
@@ -58,7 +58,7 @@ class LinkVisualizer:
             plt.savefig(file_path, bbox_inches="tight", dpi=300)
 
         return fig, ax
-    
+
     def plot_buffer_occupancy(
         self,
         links: list[Link],
@@ -78,7 +78,7 @@ class LinkVisualizer:
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
         for i, link in enumerate(links):
-            times, occupancies = zip(*link.metrics.buffer_occupancy_samples)
+            times, occupancies = zip(*link.get_metric_samples("buffer_occupancy"))
             times = np.array(times)
             occupancies = np.array(occupancies)
 
@@ -232,3 +232,47 @@ class LinkVisualizer:
             plt.savefig(save_path, bbox_inches="tight", dpi=300)
 
         return fig, (ax1, ax2)
+
+    def plot_fct(
+        self,
+        links: list[Link],
+        window: Optional[Tuple[float, float]] = None,
+        fig_size: Tuple[int, int] = (12, 6),
+        save_path: Optional[str] = None,
+    ):
+        fig, ax = plt.subplots(figsize=fig_size)
+        # Plot each link
+        for i, link in enumerate(links):
+            times, occupancies = zip(*link.get_metric_samples("flow_completion_time"))
+            times = np.array(times)
+            occupancies = np.array(occupancies)
+
+            # Filter by time window if specified
+            if window:
+                start_time, end_time = window
+                mask = (times >= start_time) & (times <= end_time)
+                times = times[mask]
+                occupancies = occupancies[mask]
+
+            # Plot buffer occupancies
+            ax.plot(times, occupancies, alpha=0.5, label=f"Link {i + 1}")
+
+        # Customize plot
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Average Flow Completion Time (seconds)")
+        ax.set_title("Average Flow Completion Time Over Time")
+        ax.grid(True, linestyle="--", alpha=0.7)
+        # ax.set_ylim(0, 100)
+
+        # Add legend
+        ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+
+        # Adjust layout to prevent label cutoff
+        plt.tight_layout()
+
+        # Save if path provided
+        if save_path:
+            file_path = save_path + "/fct.png"
+            plt.savefig(file_path, bbox_inches="tight", dpi=300)
+
+        return fig, ax

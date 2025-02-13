@@ -7,7 +7,7 @@ simulation:
     file: "simulation.log"
 
 network:
-  strategy: "ecmp"
+  strategy: "wcmp"
   links:
     - id: "link1"
       capacity: 10240

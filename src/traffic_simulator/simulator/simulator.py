@@ -13,8 +13,7 @@ from traffic_simulator.models.event import (
 from traffic_simulator.simulator.visualizer import LinkVisualizer
 from typing import List
 from traffic_simulator.config.models import LinkConfig
-from traffic_simulator.metrics.mse import calculate_mse, calculate_per_link_errors 
-
+from traffic_simulator.metrics.mse import calculate_mse, calculate_per_link_errors
 
 
 class Simulator:
@@ -45,7 +44,7 @@ class Simulator:
         # Initialize simulation state
         self._time = 0.0
         self._events: list[Event] = []
-    
+
     def _sample_mse(self):
         """Sample and store current MSE value"""
         mse = calculate_mse(self.links, self.link_configs, self._time)
@@ -109,12 +108,13 @@ class Simulator:
         link_visualizer = LinkVisualizer()
         link_visualizer.plot_utilization(self.links, save_path=save_path)
         link_visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
+        link_visualizer.plot_fct(self.links, save_path=save_path)
 
         self._visualize_flows_scatter(save_path)
 
         # Add MSE visualization
         self._visualize_mse(save_path)
-        
+
         # Add per-link error visualization
         self._visualize_per_link_errors(save_path)
 
@@ -129,23 +129,27 @@ class Simulator:
 
         if save_path:
             plt.savefig(Path(save_path) / "mse.png", bbox_inches="tight", dpi=300)
-    
+
     def _visualize_per_link_errors(self, save_path: str = None):
         """Plot squared errors for each link"""
-        final_errors = calculate_per_link_errors(self.links, self.link_configs, self._time)
-        
+        final_errors = calculate_per_link_errors(
+            self.links, self.link_configs, self._time
+        )
+
         plt.figure(figsize=(10, 6))
         links = list(final_errors.keys())
         errors = list(final_errors.values())
-        
+
         plt.bar(links, errors)
         plt.xlabel("Link ID")
         plt.ylabel("Squared Error")
         plt.title("Final Squared Error per Link")
-        
+
         if save_path:
-            plt.savefig(Path(save_path) / "per_link_errors.png", bbox_inches="tight", dpi=300)
-            
+            plt.savefig(
+                Path(save_path) / "per_link_errors.png", bbox_inches="tight", dpi=300
+            )
+
     def _visualize_flows_scatter(self, save_path: str = None):
         arrival_times = [flow.arrival_time for flow in self.flow_generator.all_flows]
         flow_sizes = [flow.flow_size for flow in self.flow_generator.all_flows]
@@ -157,5 +161,6 @@ class Simulator:
         plt.title("Flow Arrival Times and Sizes")
 
         if save_path:
-            plt.savefig(Path(save_path) / "flows_scatter.png", bbox_inches="tight", dpi=300)
-        
+            plt.savefig(
+                Path(save_path) / "flows_scatter.png", bbox_inches="tight", dpi=300
+            )

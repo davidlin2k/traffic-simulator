@@ -30,17 +30,19 @@ class WCMPSrategy(LoadBalanceStrategy):
     def select_link(self) -> Link:
         # Weighted multi-path routing
         return random.choices(self.links, weights=self.weights)[0]
-    
+
 
 class LeastCongestedStrategy(LoadBalanceStrategy):
     def select_link(self) -> Link:
         # Choose the least congested link
         return min(self.links, key=lambda link: link.busy_until)
-    
+
 
 class StrategyFactory:
     @staticmethod
-    def create_strategy(strategy_name: str, links: list[Link], config: MainConfig) -> LoadBalanceStrategy:
+    def create_strategy(
+        strategy_name: str, links: list[Link], config: MainConfig
+    ) -> LoadBalanceStrategy:
         if strategy_name == "ecmp":
             return ECMPStrategy(links)
         elif strategy_name == "wcmp":

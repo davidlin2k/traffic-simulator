@@ -8,6 +8,7 @@ from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import StrategyFactory
 from traffic_simulator.simulator.simulator import Simulator
 
+
 @click.command()
 @click.option(
     "--config",
@@ -94,4 +95,3 @@ def cli(config: str, output: str):
 #     )
 #     simulator.run()
 #     simulator.visualize(save_path=output)
-
