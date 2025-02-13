@@ -5,11 +5,9 @@ simulation:
   logging:
     level: "INFO"
     file: "simulation.log"
-  metrics:
-    sample_interval: 1.0
 
 network:
-  strategy: "wcmp"
+  strategy: "least_congested"
   links:
     - id: "link1"
       capacity: 20480
@@ -37,5 +35,5 @@ traffic:
     type: "bounded_pareto"
     params:
       alpha: 0.26
-      lower: 100
-      upper: 973340000
+      lower: 0.1
+      upper: 973340
