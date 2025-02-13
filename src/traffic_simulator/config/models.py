@@ -8,10 +8,22 @@ class LoggingConfig(BaseModel):
     file: Optional[str] = None
 
 
+class MetricsConfig(BaseModel):
+    enabled: bool = True
+    sample_interval: float = 1.0
+
+    @field_validator("sample_interval")
+    def validate_interval(cls, v):
+        if v <= 0:
+            raise ValueError("Sample interval must be positive")
+        return v
+
+
 class SimulationConfig(BaseModel):
     duration: float
     seed: Optional[int] = None
     logging: LoggingConfig = LoggingConfig()
+    metrics: MetricsConfig = MetricsConfig()
 
     @field_validator("duration")
     def validate_duration(cls, v):

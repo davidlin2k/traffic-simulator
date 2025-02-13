@@ -2,16 +2,21 @@ from typing import List, Dict
 import numpy as np
 from traffic_simulator.ports.link import Link
 from traffic_simulator.config.models import LinkConfig
+from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
 
 
 def calculate_mse(
-    links: List[Link], link_configs: List[LinkConfig], current_time: float
+    metrics_tracker: LinkMetricsTracker,
+    links: List[Link],
+    link_configs: List[LinkConfig],
+    current_time: float,
 ) -> float:
     """
     Calculate Mean Square Error between target and actual link utilizations.
 
     Args:
-        links: List of Link objects with current utilization data
+        metrics_tracker: LinkMetricsTracker instance managing the metrics
+        links: List of Link objects
         link_configs: List of LinkConfig objects containing target utilizations
         current_time: Current simulation time
 
@@ -21,13 +26,19 @@ def calculate_mse(
     squared_errors = []
 
     for link, config in zip(links, link_configs):
-        # Get actual utilization for the link
-        actual_utilization = link.get_metric_samples("link_utilization")[-1][1]
+        # Get actual utilization from the metrics tracker
+        samples = metrics_tracker.get_link_metric_samples(link, "link_utilization")
+        if not samples:
+            continue
+        actual_utilization = samples[-1][1]  # Get latest sample
         target_utilization = config.target_utilization
 
         # Calculate squared error
         error = actual_utilization - target_utilization
         squared_errors.append(error**2)
+
+    if not squared_errors:
+        return 0.0
 
     # Calculate mean of squared errors
     mse = np.mean(squared_errors)
@@ -35,13 +46,17 @@ def calculate_mse(
 
 
 def calculate_per_link_errors(
-    links: List[Link], link_configs: List[LinkConfig], current_time: float
+    metrics_tracker: LinkMetricsTracker,
+    links: List[Link],
+    link_configs: List[LinkConfig],
+    current_time: float,
 ) -> Dict[str, float]:
     """
     Calculate squared error for each link individually.
 
     Args:
-        links: List of Link objects with current utilization data
+        metrics_tracker: LinkMetricsTracker instance managing the metrics
+        links: List of Link objects
         link_configs: List of LinkConfig objects containing target utilizations
         current_time: Current simulation time
 
@@ -51,7 +66,12 @@ def calculate_per_link_errors(
     errors = {}
 
     for link, config in zip(links, link_configs):
-        actual_utilization = link.get_metric_samples("link_utilization")[-1][1]
+        samples = metrics_tracker.get_link_metric_samples(link, "link_utilization")
+        if not samples:
+            errors[config.id] = 0.0
+            continue
+            
+        actual_utilization = samples[-1][1]  # Get latest sample
         target_utilization = config.target_utilization
 
         error = actual_utilization - target_utilization

@@ -47,7 +47,8 @@ def cli(config: str, output: str):
         flow_generator=flow_generator,
         strategy=strategy,
         links=links,
-        link_configs=sim_config.network.links,  # Add link configs
+        link_configs=sim_config.network.links,
+        sample_interval=sim_config.simulation.metrics.sample_interval,
     )
     simulator.run()
     simulator.visualize(save_path=output)

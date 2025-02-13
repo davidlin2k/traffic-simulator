@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import heapq
 
 from traffic_simulator.flows.flow_generator import FlowGenerator
+from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
 from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import LoadBalanceStrategy
 from traffic_simulator.models.event import (
@@ -15,6 +16,7 @@ from typing import List
 from traffic_simulator.config.models import LinkConfig
 from traffic_simulator.metrics.mse import calculate_mse, calculate_per_link_errors
 
+import logging
 
 class Simulator:
     def __init__(
@@ -24,6 +26,7 @@ class Simulator:
         strategy: LoadBalanceStrategy,
         links: list[Link],
         link_configs: List[LinkConfig],
+        sample_interval: float = 1.0,
     ):
         """
         duration: total simulation time.
@@ -45,16 +48,29 @@ class Simulator:
         self._time = 0.0
         self._events: list[Event] = []
 
+        self.metrics_tracker = LinkMetricsTracker(sample_interval=sample_interval)
+        
+        # Register all links with the tracker
+        for link in links:
+            self.metrics_tracker.register_link(link)
+
+        self.visualizer = LinkVisualizer(self.metrics_tracker)
+        
     def _sample_mse(self):
         """Sample and store current MSE value"""
-        mse = calculate_mse(self.links, self.link_configs, self._time)
+        mse = calculate_mse(
+            self.metrics_tracker,
+            self.links,
+            self.link_configs,
+            self._time
+        )
         self.mse_samples.append(mse)
         self.mse_timestamps.append(self._time)
 
     def run(self):
         # Generate initial events
         self._generate_flow_events()
-
+    
         while self._events:
             # Get the next event
             event = heapq.heappop(self._events)
@@ -66,6 +82,9 @@ class Simulator:
                 self._process_packet_arrival(event)
             elif isinstance(event, FlowCompletionEvent):
                 self._process_packet_completion(event)
+
+            # Log progress
+            print(f"time: {self._time:.2f}, event_type: {event.__class__.__name__}")
 
         self._sample_stats()
         self.visualize()
@@ -100,15 +119,13 @@ class Simulator:
 
     def _sample_stats(self):
         # Sample link utilizations and buffer occupancy
-        for link in self.links:
-            link.sample_metrics(self._time)
+        self.metrics_tracker.sample_metrics(self._time)
         self._sample_mse()
 
     def visualize(self, save_path: str = None):
-        link_visualizer = LinkVisualizer()
-        link_visualizer.plot_utilization(self.links, save_path=save_path)
-        link_visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
-        link_visualizer.plot_fct(self.links, save_path=save_path)
+        self.visualizer.plot_utilization(self.links, save_path=save_path)
+        self.visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
+        self.visualizer.plot_fct(self.links, save_path=save_path)
 
         self._visualize_flows_scatter(save_path)
 
@@ -133,7 +150,10 @@ class Simulator:
     def _visualize_per_link_errors(self, save_path: str = None):
         """Plot squared errors for each link"""
         final_errors = calculate_per_link_errors(
-            self.links, self.link_configs, self._time
+            self.metrics_tracker,
+            self.links,
+            self.link_configs,
+            self._time
         )
 
         plt.figure(figsize=(10, 6))

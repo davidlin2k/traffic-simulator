@@ -1,10 +1,8 @@
 import collections
-from typing import Deque, List, Tuple
+from typing import Deque, List
 
 from traffic_simulator.models.flow import Flow
-from traffic_simulator.models.link_metrics import LinkMetrics
-from traffic_simulator.metrics.metric_manager import MetricsManager
-from traffic_simulator.metrics.metric_collector import UtilizationCollector, BufferOccupancyCollector, FlowCompletionTimeCollector
+
 
 class Link:
     def __init__(self, capacity_bps: float):
@@ -13,14 +11,6 @@ class Link:
 
         self.busy_until: float = 0.0  # Time until current transmission completes
         self.flows: List[Flow] = []
-
-        self._metrics_manager = MetricsManager()
-        self._metrics_manager.register(UtilizationCollector())
-        self._metrics_manager.register(BufferOccupancyCollector())
-        self._metrics_manager.register(FlowCompletionTimeCollector())
-
-        self.last_sample_time = 0.0
-        self.sample_interval = 0.1
 
     def enqueue_flow(self, flow: Flow, current_time: float) -> float:
         """
@@ -55,25 +45,10 @@ class Link:
         if self.queue and current_time >= self.queue[0].end_time:
             flow = self.queue.popleft()
             self.flows.append(flow)
-            
+
             return flow
 
         return None
-
-    def sample_metrics(self, current_time: float) -> None:
-        """
-        Sample all metrics until current_time.
-        The collected metrics are stored in the MetricsManager rather than fixed strings.
-        """
-        while self.last_sample_time < current_time:
-            self._metrics_manager.sample_all(self, self.last_sample_time)
-            self.last_sample_time += self.sample_interval
-
-    def get_metric_samples(self, metric_name: str):
-        """
-        Retrieve samples for a given metric; metric_name comes from the collector.
-        """
-        return self._metrics_manager.samples.get(metric_name, [])
     
     def _get_remaining_flow_size(self, flow: Flow, current_time: float) -> float:
         """Calculates remaining flow size"""
