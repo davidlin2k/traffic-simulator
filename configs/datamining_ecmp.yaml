@@ -1,0 +1,39 @@
+version: "1.0"
+
+simulation:
+  duration: 100.0
+  logging:
+    level: "INFO"
+    file: "simulation.log"
+
+network:
+  strategy: "ecmp"
+  links:
+    - id: "link1"
+      capacity: 20480
+      time_window_duration: 60
+      target_utilization: 0.2
+    - id: "link2"
+      capacity: 20480
+      time_window_duration: 60
+      target_utilization: 0.2
+    - id: "link3"
+      capacity: 20480
+      time_window_duration: 60
+      target_utilization: 0.4
+    - id: "link4"
+      capacity: 20480
+      time_window_duration: 60
+      target_utilization: 1.0 
+
+traffic:
+  flow_arrival:
+    type: "poisson"
+    rate: 10.0
+  
+  flow_size:
+    type: "bounded_pareto"
+    params:
+      alpha: 0.26
+      lower: 0.1
+      upper: 973340

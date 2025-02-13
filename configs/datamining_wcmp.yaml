@@ -1,38 +1,39 @@
 version: "1.0"
 
 simulation:
-  duration: 10.0
+  duration: 100.0
   logging:
     level: "INFO"
     file: "simulation.log"
 
 network:
+  strategy: "wcmp"
   links:
     - id: "link1"
-      capacity: 10240
+      capacity: 20480
       time_window_duration: 60
       target_utilization: 0.2
     - id: "link2"
-      capacity: 10240
+      capacity: 20480
       time_window_duration: 60
       target_utilization: 0.2
     - id: "link3"
-      capacity: 10240
+      capacity: 20480
       time_window_duration: 60
       target_utilization: 0.4
     - id: "link4"
-      capacity: 10240
+      capacity: 20480
       time_window_duration: 60
       target_utilization: 1.0 
 
 traffic:
   flow_arrival:
     type: "poisson"
-    rate: 15.0 # More frequent data transfers between multiple nodes
+    rate: 10.0
   
   flow_size:
     type: "bounded_pareto"
     params:
-      alpha: 0.15        # Lower alpha = more heavy-tailed = more variance in sizes
-      lower: 10485760    
-      upper: 10737418240 
+      alpha: 0.26
+      lower: 0.1
+      upper: 973340
