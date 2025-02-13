@@ -4,6 +4,7 @@ import pathlib
 from traffic_simulator.config.config_loader import load_config
 from traffic_simulator.flows.flow_generator import PoissonFlowGenerator
 from traffic_simulator.flows.flow_size_generator import FlowSizeGeneratorFactory
+from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
 from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import StrategyFactory
 from traffic_simulator.simulator.simulator import Simulator
@@ -36,10 +37,15 @@ def cli(config: str, output: str):
     )
 
     links = [Link(capacity_bps=link.capacity) for link in sim_config.network.links]
+    links_metric_tracker = LinkMetricsTracker(sim_config.simulation.metrics.sample_interval)
+    for link in links:
+        links_metric_tracker.register_link(link)
+
     strategy = StrategyFactory.create_strategy(
         strategy_name=sim_config.network.strategy,
         links=links,
         config=sim_config,
+        link_metric_tracker=links_metric_tracker,
     )
 
     simulator = Simulator(
@@ -48,7 +54,7 @@ def cli(config: str, output: str):
         strategy=strategy,
         links=links,
         link_configs=sim_config.network.links,
-        sample_interval=sim_config.simulation.metrics.sample_interval,
+        link_metric_tracker=links_metric_tracker,
     )
     simulator.run()
     simulator.visualize(save_path=output)

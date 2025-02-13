@@ -26,7 +26,7 @@ class Simulator:
         strategy: LoadBalanceStrategy,
         links: list[Link],
         link_configs: List[LinkConfig],
-        sample_interval: float = 1.0,
+        link_metric_tracker: LinkMetricsTracker,
     ):
         """
         duration: total simulation time.
@@ -48,12 +48,7 @@ class Simulator:
         self._time = 0.0
         self._events: list[Event] = []
 
-        self.metrics_tracker = LinkMetricsTracker(sample_interval=sample_interval)
-        
-        # Register all links with the tracker
-        for link in links:
-            self.metrics_tracker.register_link(link)
-
+        self.metrics_tracker = link_metric_tracker
         self.visualizer = LinkVisualizer(self.metrics_tracker)
         
     def _sample_mse(self):
