@@ -68,6 +68,130 @@ class LinkVisualizer:
             plt.savefig(file_path, bbox_inches="tight", dpi=300)
 
         return fig, ax
+    
+    def plot_max_utilization(
+        self,
+        links: list[Link],
+        fig_size: Tuple[int, int] = (12, 6),
+        save_path: Optional[str] = None,
+    ):
+        """
+        Plot the link utilization's variance over time.
+
+        Args:
+            links: List of Link objects with utilization samples
+            fig_size: Figure size in inches (width, height)
+            save_path: Optional path to save the figure
+        """
+        fig, ax = plt.subplots(figsize=fig_size)
+
+        # Store the max utilization of each link
+        max_utilization = [0 for _ in range(len(links))]
+
+        # Plot each link
+        for i, link in enumerate(links):
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "link_utilization"
+            )
+            if not samples:
+                continue
+
+            _, utils = zip(*samples)
+            utils = np.array(utils)
+
+            # Store max utilization for this link
+            max_utilization[i] = max(utils) * 100
+
+        # Bar chart for max utilization
+        link_labels = [f"Link {i+1}" for i in range(len(links))]
+        ax.bar(link_labels, max_utilization, color="steelblue", alpha=0.7)
+
+        # Customize max utilization plot
+        ax.set_xlabel("Links")
+        ax.set_ylabel("Max Utilization (%)")
+        ax.set_title("Max Utilization of Each Link")
+        ax.set_ylim(0, 100)
+        ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+        # Save if path provided
+        if save_path:
+            file_path = save_path + "/max_utilization.png"
+            plt.savefig(file_path, bbox_inches="tight", dpi=300)
+
+        return fig, ax
+    
+    def plot_variance(
+        self,
+        links: list[Link],
+        window: Optional[Tuple[float, float]] = None,
+        fig_size: Tuple[int, int] = (12, 6),
+        save_path: Optional[str] = None,
+    ):
+        """
+        Plot the link utilizations variance over time.
+
+        Args:
+            links: List of Link objects with utilization samples
+            window: Optional time window (start_time, end_time) to plot
+            fig_size: Figure size in inches (width, height)
+            save_path: Optional path to save the figure
+        """
+        # Dictionary to store all link's utilization at each time step
+        utilization_over_time = {}
+
+        fig, ax = plt.subplots(figsize=fig_size)
+        # Plot each link
+        for i, link in enumerate(links):
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "link_utilization"
+            )
+            if not samples:
+                continue
+
+            times, utils = zip(*samples)
+            times = np.array(times)
+            utils = np.array(utils)
+
+            # Filter by time window if specified
+            if window:
+                start_time, end_time = window
+                mask = (times >= start_time) & (times <= end_time)
+                times = times[mask]
+                utils = utils[mask]
+
+            # Store utilization at each timestamp
+            for time, util in zip(times, utils):
+                if time not in utilization_over_time:
+                    utilization_over_time[time] = []
+                utilization_over_time[time].append(util)
+
+        # Compute variance at each timestamp
+        times_sorted = sorted(utilization_over_time.keys())
+        variances = [np.var(utilization_over_time[t]) for t in times_sorted]
+
+        # Find max variance
+        max_variance = max(variances) if variances else 0
+
+        # Plot variance over time
+        fig, ax = plt.subplots(figsize=fig_size)
+        ax.plot(times_sorted, variances, color="red", label="Variance of Link Utilization")
+        
+        # Highlight max variance with a dashed line
+        ax.axhline(y=max_variance, color="black", linestyle="--", alpha=0.8, label=f"Max Variance ({max_variance:.2f}%)")
+
+        # Customize plot
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Variance of Utilization (%)")
+        ax.set_title("Variance of Link Utilization Over Time")
+        ax.grid(True, linestyle="--", alpha=0.7)
+        ax.legend()
+        plt.tight_layout()
+
+        # Save if path provided
+        if save_path:
+            plt.savefig(save_path + "/variance_over_time.png", bbox_inches="tight", dpi=300)
+
+        return fig, ax
 
     def plot_buffer_occupancy(
         self,

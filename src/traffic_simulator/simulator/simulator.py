@@ -117,6 +117,8 @@ class Simulator:
 
     def visualize(self, save_path: str = None):
         self.visualizer.plot_utilization(self.links, save_path=save_path)
+        self.visualizer.plot_max_utilization(self.links, save_path=save_path)
+        self.visualizer.plot_variance(self.links, save_path=save_path)
         self.visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
         self.visualizer.plot_fct(self.links, save_path=save_path)
 
