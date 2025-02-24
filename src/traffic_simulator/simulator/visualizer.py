@@ -150,7 +150,8 @@ class LinkVisualizer:
 
             times, utils = zip(*samples)
             times = np.array(times)
-            utils = np.array(utils)
+            # Convert to percentage
+            utils = np.array(utils) * 100
 
             # Filter by time window if specified
             if window:
