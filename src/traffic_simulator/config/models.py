@@ -58,7 +58,13 @@ class LinkConfig(BaseModel):
 
 
 class NetworkConfig(BaseModel):
-    strategy: Literal["ecmp", "wcmp", "least_congested", "most_under_target"]
+    strategy: Literal[
+        "ecmp", 
+        "wcmp", 
+        "least_congested", 
+        "most_under_target", 
+        # "quantile_based",
+        ]
     links: List[LinkConfig]
 
 

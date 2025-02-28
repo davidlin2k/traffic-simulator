@@ -48,6 +48,7 @@ def cli(config: str, output: str):
         links=links,
         config=sim_config,
         link_metric_tracker=links_metric_tracker,
+        flow_size_generator=flow_size_generator,
     )
 
     simulator = Simulator(

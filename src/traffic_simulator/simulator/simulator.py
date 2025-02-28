@@ -94,7 +94,7 @@ class Simulator:
 
     def _process_packet_arrival(self, event: FlowArrivalEvent):
         """Handle packet arrival event"""
-        link = self.strategy.select_link()
+        link = self.strategy.select_link(event)
 
         # Schedule packet transmission completion
         finish_time = link.enqueue_flow(event.flow, self._time)
