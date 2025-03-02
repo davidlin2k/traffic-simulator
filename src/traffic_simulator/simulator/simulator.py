@@ -1,8 +1,9 @@
 from pathlib import Path
 import matplotlib.pyplot as plt
 import heapq
+import numpy as np
 
-from traffic_simulator.flows.flow_generator import FlowGenerator
+from traffic_simulator.flows.flow_generator import FlowGenerator, FlowSizeGenerator
 from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
 from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import LoadBalanceStrategy
@@ -24,6 +25,7 @@ class Simulator:
         self,
         duration: float,
         flow_generator: FlowGenerator,
+        flow_size_generator: FlowSizeGenerator,
         strategy: LoadBalanceStrategy,
         links: list[Link],
         link_configs: List[LinkConfig],
@@ -44,6 +46,9 @@ class Simulator:
         self.mse_samples = []
         self.mse_timestamps = []
         self.sample_interval = 1.0
+
+        # To graph flow size
+        self.flow_size_generator = flow_size_generator
 
         # Initialize simulation state
         self._time = 0.0
@@ -129,6 +134,31 @@ class Simulator:
 
         # Add per-link error visualization
         self._visualize_per_link_errors(save_path)
+
+        self._visualize_workload_sizes(save_path)
+
+    def _visualize_workload_sizes(self, save_path):
+        """Plots the cumulative probability distribution using the quantile function with a logarithmic x-axis."""
+        probabilities = np.linspace(0.00, 1.00, 100)  # 100 samples from 0.00 to 1.00
+        flow_sizes = [self.flow_size_generator.generate_with_probability(p) for p in probabilities]
+
+        # Plot the CDF
+        plt.figure(figsize=(8, 5))
+        plt.plot(flow_sizes, probabilities, marker='o', linestyle='-', color='b', markersize=3, 
+                label="CDF (Each point is 1% probability equally spaced apart)")
+        
+        plt.xlabel("Flow Size")
+        plt.ylabel("Cumulative Probability")
+        plt.title("Cumulative Distribution Function (Log-Scale X)")
+        
+        plt.xscale("log")  # Set the x-axis to log scale
+        plt.xticks([10**i for i in range(1, int(np.log10(max(flow_sizes))) + 1)])  # Log-spaced ticks
+
+        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+        plt.legend()
+
+        if save_path:
+            plt.savefig(Path(save_path) / "flow_size_cumulative_probability.png", bbox_inches="tight", dpi=300)
 
     def _visualize_mse(self, save_path: str = None):
         """Plot MSE over time"""

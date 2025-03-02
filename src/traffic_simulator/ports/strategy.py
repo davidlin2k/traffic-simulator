@@ -82,52 +82,77 @@ class MostUnderTargetStrategy(LoadBalanceStrategy):
             return most_underutilized
 
         return min(self.links, key=lambda link: link.busy_until)
+
+class PercentileBasedStrategy(LoadBalanceStrategy):
+    def __init__(
+        self,
+        links: list[Link],
+        link_metric_tracker: LinkMetricsTracker,
+        flow_size_generator: FlowSizeGenerator,
+    ):
+        super().__init__(links)
+        self.link_metric_tracker = link_metric_tracker
+        self.flow_size_generator = flow_size_generator
+
+        # Compute target utilizations once since the workload is static
+        self.target_utilizations = self._compute_target_utilizations()
+
+        # Define a threshold for "large flows" (e.g., 95th percentile of flow sizes)
+        self.large_flow_threshold = self.flow_size_generator.generate_with_probability(0.95)
+
+    def _compute_target_utilizations(self) -> dict[Link, float]:
+        """Compute target utilizations based on flow size percentiles."""
+        num_links = len(self.links)
+        probabilities = [(i + 1) / (num_links + 1) for i in range(num_links)]
+
+        print(f"probabilities are {probabilities}")
+
+        min_flow = self.flow_size_generator.generate_with_probability(0.0)
+        max_flow = self.flow_size_generator.generate_with_probability(1.0)
+        flow_range = max_flow - min_flow
+        target_utilizations = {}
+
+        print(f"min_flow: {min_flow}, max_flow: {max_flow}, flow_range: {flow_range}")
+        i = 0
+
+        for link, prob in zip(self.links, probabilities):
+            percentile_flow = self.flow_size_generator.generate_with_probability(prob)
+            utilization_fraction = (percentile_flow - min_flow) / flow_range
+            complementary_utilization_fraction = 1.0 - utilization_fraction
+            target_utilizations[link] = complementary_utilization_fraction
+
+            print(f"link {i} has prob {prob} which has flow size {percentile_flow} and fraction {utilization_fraction} so complementary is {complementary_utilization_fraction}")
+            i += 1
+
+        return target_utilizations
     
-# class QuantileBasedStrategy(LoadBalanceStrategy):
-#     def __init__(
-#         self,
-#         links: list[Link],
-#         link_metric_tracker: LinkMetricsTracker,
-#         config: MainConfig,
-#         flow_size_generator: FlowSizeGenerator,
-#     ):
-#         super().__init__(links)
-#         self.link_metric_tracker = link_metric_tracker
-#         self.config = config
-#         self.flow_size_generator = flow_size_generator
+    def get_current_utilization(self, link):
+        samples = self.link_metric_tracker.get_link_metric_samples(
+            link, "link_utilization"
+        )
+        if not samples:
+            return float("-inf")
 
-#     def _get_utilization_gap(self, link: Link, link_config) -> float:
-#         """Calculate how far a link is below its target utilization."""
-#         samples = self.link_metric_tracker.get_link_metric_samples(
-#             link, "link_utilization"
-#         )
-#         if not samples:
-#             return float("-inf")
+        current_utilization = samples[-1][1]
+        return current_utilization
+    
+    def select_link(self, event: FlowArrivalEvent) -> Link:
+        """Choose a link based on target utilization and flow size."""
+        flow_size = event.flow.flow_size
+        current_utilizations = {
+            link: self.get_current_utilization(link) for link in self.links
+        }
 
-#         current_utilization = samples[-1][1]
-#         return link_config.target_utilization - current_utilization
+        if flow_size >= self.large_flow_threshold:
+            # For large flows, assign to the link with the lowest current utilization
+            print(f"current utilizations: {current_utilizations}, assigning to lowest which is {min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))}")
+            return min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))
 
-#     def _find_most_underutilized_link(self) -> Link | None:
-#         """Find the link with the largest positive gap to its target utilization."""
-#         utilization_gaps = [
-#             (link, self._get_utilization_gap(link, link_config))
-#             for link, link_config in zip(self.links, self.config.network.links)
-#         ]
+            # print(f"weights = {[1 - self.target_utilizations[link] for link in self.links]}")
+            # return random.choices(self.links, weights=[1 - self.target_utilizations[link] for link in self.links])[0]
 
-#         valid_gaps = [(link, gap) for link, gap in utilization_gaps if gap > 0]
-#         if not valid_gaps:
-#             return None
-
-#         return max(valid_gaps, key=lambda x: x[1])[0]
-
-#     def select_link(self, event: FlowArrivalEvent) -> Link:
-#         """Choose the link most below its target utilization, or least congested if none are under target."""
-#         most_underutilized = self._find_most_underutilized_link()
-#         if most_underutilized:
-#             return most_underutilized
-
-#         return min(self.links, key=lambda link: link.busy_until)
-
+        # For normal flows, assign based on target utilization
+        return random.choices(self.links, weights=[self.target_utilizations[link] for link in self.links])[0]
 
 class StrategyFactory:
     @staticmethod
@@ -147,7 +172,7 @@ class StrategyFactory:
             return LeastCongestedStrategy(links)
         elif strategy_name == "most_under_target":
             return MostUnderTargetStrategy(links, link_metric_tracker, config)
-        # elif strategy_name == "quantile_based":
-        #     return QuantileBasedStrategy(links, link_metric_tracker, config, flow_size_generator)
+        elif strategy_name == "percentile_based":
+            return PercentileBasedStrategy(links, link_metric_tracker, flow_size_generator)
         else:
             raise ValueError(f"Invalid strategy name: {strategy_name}")

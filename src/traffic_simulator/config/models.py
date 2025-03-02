@@ -63,7 +63,7 @@ class NetworkConfig(BaseModel):
         "wcmp", 
         "least_congested", 
         "most_under_target", 
-        # "quantile_based",
+        "percentile_based",
         ]
     links: List[LinkConfig]
 

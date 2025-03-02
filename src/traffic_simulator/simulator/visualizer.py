@@ -141,7 +141,7 @@ class LinkVisualizer:
 
         fig, ax = plt.subplots(figsize=fig_size)
         # Plot each link
-        for i, link in enumerate(links):
+        for _, link in enumerate(links):
             samples = self.metrics_tracker.get_link_metric_samples(
                 link, "link_utilization"
             )

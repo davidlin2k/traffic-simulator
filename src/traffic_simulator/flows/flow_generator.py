@@ -27,13 +27,17 @@ class PoissonFlowGenerator(FlowGenerator):
         flow_size_generator: An instance of FlowSizeGenerator.
         """
         super().__init__(flow_size_generator)
+        self.seed = 0
         self.arrival_rate = arrival_rate
         self.next_flow_id = 0
 
     def generate_flows(self, current_time: float, end_time: float) -> Iterator[Flow]:
         while current_time < end_time:
             flow_size = self.flow_size_generator.generate()
+
+            random.seed(self.seed)
             current_time += random.expovariate(self.arrival_rate)
+            self.seed += 1
 
             flow = Flow(
                 id=self.next_flow_id, arrival_time=current_time, flow_size=flow_size

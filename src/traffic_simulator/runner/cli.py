@@ -54,6 +54,7 @@ def cli(config: str, output: str):
     simulator = Simulator(
         duration=sim_config.simulation.duration,
         flow_generator=flow_generator,
+        flow_size_generator=flow_size_generator,
         strategy=strategy,
         links=links,
         link_configs=sim_config.network.links,
