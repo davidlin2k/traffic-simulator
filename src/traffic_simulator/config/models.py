@@ -64,8 +64,11 @@ class NetworkConfig(BaseModel):
         "least_congested", 
         "most_under_target", 
         "percentile_based",
+        "uneven",
         ]
     links: List[LinkConfig]
+    buffer_link_indices: Optional[List[int]] = None  # Indices of links to use as buffers
+    large_flow_percentile: Optional[float] = 95.0  # Percentile threshold for large flows
 
 
 class PoissonArrivalConfig(BaseModel):
@@ -107,8 +110,18 @@ class TrafficConfig(BaseModel):
     flow_size: FlowSizeConfig
 
 
+class FlowSizeDistribution(BaseModel):
+    """Parameters for the flow size distribution"""
+    distribution_type: str = "bounded_pareto"  # bounded_pareto, exponential, etc.
+    mean: float = 100.0  # Mean flow size
+    alpha: Optional[float] = 1.1  # Shape parameter for Pareto
+    min_size: Optional[float] = 10.0  # Minimum flow size for bounded Pareto
+    max_size: Optional[float] = 1000.0  # Maximum flow size for bounded Pareto
+
+
 class MainConfig(BaseModel):
     version: str
     simulation: SimulationConfig
     network: NetworkConfig
     traffic: TrafficConfig
+    flow_size_distribution: FlowSizeDistribution = Field(default_factory=FlowSizeDistribution)

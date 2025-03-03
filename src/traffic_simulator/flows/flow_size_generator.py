@@ -72,16 +72,11 @@ class FlowSizeGeneratorFactory:
     }
 
     @classmethod
-    def create_generator(cls, config: MainConfig) -> FlowSizeGenerator:
+    def create_generator(cls, config: MainConfig, distribution: Distribution) -> FlowSizeGenerator:
         if config.traffic.flow_size.type == "bounded_pareto":
             if not isinstance(config.traffic.flow_size.params, BoundedParetoParams):
                 raise ValueError("Invalid parameters for Bounded Pareto.")
 
-            distribution = BoundedParetoDistribution(
-                lower_bound=config.traffic.flow_size.params.lower,
-                upper_bound=config.traffic.flow_size.params.upper,
-                alpha=config.traffic.flow_size.params.alpha,
-            )
             return QuantileFlowSizeGenerator(distribution)
 
         elif config.traffic.flow_size.type == "uniform":

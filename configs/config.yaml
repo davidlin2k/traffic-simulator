@@ -1,13 +1,13 @@
 version: "1.0"
 
 simulation:
-  duration: 200.0
+  duration: 1000.0
   logging:
     level: "INFO"
     file: "simulation.log"
 
 network:
-  strategy: "most_under_target"
+  strategy: "uneven"
   links:
     - id: "link1"
       capacity: 10240
@@ -16,15 +16,15 @@ network:
     - id: "link2"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 0.2
+      target_utilization: 0.8
     - id: "link3"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 0.4
+      target_utilization: 0.8
     - id: "link4"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 1.0 
+      target_utilization: 0.8 
 
 traffic:
   flow_arrival:
@@ -34,6 +34,6 @@ traffic:
   flow_size:
     type: "bounded_pareto"
     params:
-      alpha: 0.125
-      lower: 3
-      upper: 29892
+      alpha: 0.26
+      lower: 0.1
+      upper: 973340

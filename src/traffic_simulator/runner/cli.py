@@ -2,6 +2,7 @@ import click
 import pathlib
 
 from traffic_simulator.config.config_loader import load_config
+from traffic_simulator.flows.distribution import DistributionFactory
 from traffic_simulator.flows.flow_generator import PoissonFlowGenerator
 from traffic_simulator.flows.flow_size_generator import FlowSizeGeneratorFactory
 from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
@@ -29,8 +30,10 @@ def cli(config: str, output: str):
 
     # Load the configuration file
     sim_config = load_config(config)
+    
+    distribution = DistributionFactory.create_distribution(distribution_type=sim_config.traffic.flow_size.type, params=sim_config.traffic.flow_size.params)
 
-    flow_size_generator = FlowSizeGeneratorFactory.create_generator(sim_config)
+    flow_size_generator = FlowSizeGeneratorFactory.create_generator(sim_config, distribution)
     flow_generator = PoissonFlowGenerator(
         arrival_rate=sim_config.traffic.flow_arrival.rate,
         flow_size_generator=flow_size_generator,
@@ -49,6 +52,7 @@ def cli(config: str, output: str):
         config=sim_config,
         link_metric_tracker=links_metric_tracker,
         flow_size_generator=flow_size_generator,
+        distribution=distribution,
     )
 
     simulator = Simulator(

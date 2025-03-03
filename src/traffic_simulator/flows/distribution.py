@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from traffic_simulator.config.models import BoundedParetoParams
+
 
 class Distribution(ABC):
     @abstractmethod
@@ -9,6 +11,17 @@ class Distribution(ABC):
         from the distribution.
         """
         pass
+    
+    def percentile(self, p: float) -> int:
+        """
+        Return the value at the given percentile p (0-100).
+        
+        :param p: Percentile (0-100)
+        :return: Value at the given percentile
+        """
+        if not 0 <= p <= 100:
+            raise ValueError("Percentile must be between 0 and 100")
+        return self.quantile(p / 100)
 
 
 class BoundedParetoDistribution(Distribution):
@@ -34,3 +47,27 @@ class BoundedParetoDistribution(Distribution):
         )
         x = self.L / denominator
         return int(x)
+
+
+class DistributionFactory:
+    _distribution_mapping = {
+        "bounded_pareto": BoundedParetoDistribution,
+    }
+
+    @classmethod
+    def create_distribution(cls, distribution_type: str, params: BoundedParetoParams | dict) -> Distribution:
+        if distribution_type not in cls._distribution_mapping:
+            raise ValueError(f"Unknown distribution type: {distribution_type}")
+
+        if distribution_type == "bounded_pareto":
+            if not isinstance(params, BoundedParetoParams):
+                raise ValueError("Invalid parameters for Bounded Pareto.")
+            
+            return BoundedParetoDistribution(
+                lower_bound=params.lower,
+                upper_bound=params.upper,
+                alpha=params.alpha,
+            )
+        
+        raise ValueError(f"Unsupported distribution type: {distribution_type}")
+    

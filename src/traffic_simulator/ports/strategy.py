@@ -1,7 +1,9 @@
 import random
 from abc import ABC, abstractmethod
+import statistics
 
 from traffic_simulator.config.models import MainConfig
+from traffic_simulator.flows.distribution import Distribution
 from traffic_simulator.metrics.metric_manager import LinkMetricsTracker
 from traffic_simulator.models.flow import Flow
 from traffic_simulator.ports.link import Link
@@ -16,6 +18,11 @@ class LoadBalanceStrategy(ABC):
     def select_link(self, event: FlowArrivalEvent) -> Link:
         """Choose which link to send the packet on."""
         pass
+    
+    def select_link_for_flow(self, flow: Flow) -> Link:
+        """Choose which link to send the flow on based on its characteristics.
+        Default implementation simply calls select_link()."""
+        return self.select_link()
 
 
 class ECMPStrategy(LoadBalanceStrategy):
@@ -78,7 +85,7 @@ class MostUnderTargetStrategy(LoadBalanceStrategy):
     def select_link(self, event: FlowArrivalEvent) -> Link:
         """Choose the link most below its target utilization, or least congested if none are under target."""
         most_underutilized = self._find_most_underutilized_link()
-        if most_underutilized:
+        if (most_underutilized):
             return most_underutilized
 
         return min(self.links, key=lambda link: link.busy_until)
@@ -136,9 +143,9 @@ class PercentileBasedStrategy(LoadBalanceStrategy):
         current_utilization = samples[-1][1]
         return current_utilization
     
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link_for_flow(self, flow: Flow) -> Link:
         """Choose a link based on target utilization and flow size."""
-        flow_size = event.flow.flow_size
+        flow_size = flow.flow_size
         current_utilizations = {
             link: self.get_current_utilization(link) for link in self.links
         }
@@ -154,6 +161,51 @@ class PercentileBasedStrategy(LoadBalanceStrategy):
         # For normal flows, assign based on target utilization
         return random.choices(self.links, weights=[self.target_utilizations[link] for link in self.links])[0]
 
+class UnevenLoadBalancingStrategy(LoadBalanceStrategy):
+    def __init__(
+        self,
+        links: list[Link],
+        link_metric_tracker: LinkMetricsTracker,
+        config: MainConfig,
+        buffer_link_indices: list[int] | None = None,
+        percentile_threshold: float = 95.0,
+        distribution: Distribution | None = None,
+    ):
+        super().__init__(links)
+        # Default: use 20% of links as buffer links if not specified
+        self.buffer_link_indices = buffer_link_indices or list(range(len(links) // 5))
+        self.buffer_links = [links[i] for i in self.buffer_link_indices]
+        self.normal_links = [link for i, link in enumerate(links) if i not in self.buffer_link_indices]
+        self.link_metric_tracker = link_metric_tracker
+        self.config = config
+        self.percentile_threshold = percentile_threshold
+        self.distribution = distribution
+    
+    def get_flow_size_threshold(self):
+        """Calculate the threshold for routing to buffer links"""
+        return self.distribution.percentile(self.percentile_threshold)
+    
+    def select_link_for_flow(self, flow: Flow) -> Link:
+        """Choose which link to send the flow on based on its size."""
+        threshold = self.get_flow_size_threshold()
+        
+        if flow.flow_size > threshold:
+            # Large flow: route to least loaded buffer link
+            if self.buffer_links:
+                return min(self.buffer_links, key=lambda link: link.busy_until)
+            else:
+                # Fallback if no buffer links defined
+                return min(self.links, key=lambda link: link.busy_until)
+        else:
+            # Normal flow: use WCMPSrategy on all links
+            weights = [link.target_utilization for link in self.config.network.links]
+            return WCMPSrategy(self.links, weights).select_link()
+    
+    def select_link(self) -> Link:
+        """Default implementation when flow information isn't available."""
+        return min(self.links, key=lambda link: link.busy_until)
+
+
 class StrategyFactory:
     @staticmethod
     def create_strategy(
@@ -162,6 +214,7 @@ class StrategyFactory:
         config: MainConfig,
         link_metric_tracker: LinkMetricsTracker,
         flow_size_generator: FlowSizeGenerator,
+        distribution: Distribution | None = None,
     ) -> LoadBalanceStrategy:
         if strategy_name == "ecmp":
             return ECMPStrategy(links)
@@ -174,5 +227,12 @@ class StrategyFactory:
             return MostUnderTargetStrategy(links, link_metric_tracker, config)
         elif strategy_name == "percentile_based":
             return PercentileBasedStrategy(links, link_metric_tracker, flow_size_generator)
+        elif strategy_name == "uneven":
+            buffer_link_indices = getattr(config.network, "buffer_link_indices", None)
+            percentile_threshold = getattr(config.network, "large_flow_percentile", 95.0)
+            return UnevenLoadBalancingStrategy(
+                links, link_metric_tracker, config, 
+                buffer_link_indices, percentile_threshold, distribution
+            )
         else:
             raise ValueError(f"Invalid strategy name: {strategy_name}")
