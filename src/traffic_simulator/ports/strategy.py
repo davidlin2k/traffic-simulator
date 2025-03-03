@@ -15,7 +15,7 @@ class LoadBalanceStrategy(ABC):
         self.links = links
 
     @abstractmethod
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link(self) -> Link:
         """Choose which link to send the packet on."""
         pass
     
@@ -26,7 +26,7 @@ class LoadBalanceStrategy(ABC):
 
 
 class ECMPStrategy(LoadBalanceStrategy):
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link(self) -> Link:
         # Equal-cost multi-path routing
         return random.choice(self.links)
 
@@ -36,13 +36,13 @@ class WCMPSrategy(LoadBalanceStrategy):
         super().__init__(links)
         self.weights = weights
 
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link(self) -> Link:
         # Weighted multi-path routing
         return random.choices(self.links, weights=self.weights)[0]
 
 
 class LeastCongestedStrategy(LoadBalanceStrategy):
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link(self) -> Link:
         # Choose the least congested link
         return min(self.links, key=lambda link: link.busy_until)
 
