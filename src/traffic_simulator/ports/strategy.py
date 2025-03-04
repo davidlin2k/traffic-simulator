@@ -1,6 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 import statistics
+import numpy as np
 
 from traffic_simulator.config.models import MainConfig
 from traffic_simulator.flows.distribution import Distribution
@@ -104,35 +105,71 @@ class PercentileBasedStrategy(LoadBalanceStrategy):
         # Compute target utilizations once since the workload is static
         self.target_utilizations = self._compute_target_utilizations()
 
-        # Define a threshold for "large flows" (e.g., 95th percentile of flow sizes)
-        self.large_flow_threshold = self.flow_size_generator.generate_with_probability(0.95)
-
     def _compute_target_utilizations(self) -> dict[Link, float]:
-        """Compute target utilizations based on flow size percentiles."""
         num_links = len(self.links)
-        probabilities = [(i + 1) / (num_links + 1) for i in range(num_links)]
 
-        print(f"probabilities are {probabilities}")
+        # Step 1: Sample flow sizes at 100 evenly spaced percentiles
+        probabilities = np.linspace(0.00, 1.00, 100)
+        flow_sizes = [self.flow_size_generator.generate_with_probability(p) for p in probabilities]
 
-        min_flow = self.flow_size_generator.generate_with_probability(0.0)
-        max_flow = self.flow_size_generator.generate_with_probability(1.0)
-        flow_range = max_flow - min_flow
+        # Step 2: Compute the total flow size across all sampled points
+        total_flow_size = sum(flow_sizes)
+
+        # Step 3: Compute cumulative flow contributions
+        cumulative_flow_sizes = np.cumsum(flow_sizes)  # Running sum of flow sizes
+        normalized_cumulative = cumulative_flow_sizes / total_flow_size  # Normalize to [0,1]
+
+        # Step 4: Find the point where X% of total traffic is reached (e.g., 50%)
+
+        # choose 50% since then it balances out so 50% of data is wcmp and 50% of data is least congested
+        # this way, averages out to 0 variance since wcmp will make it so there is variance but least congested balance it out
+
+        large_flow_threshold_index = np.searchsorted(normalized_cumulative, 0.05)  # Find 50% contribution point
+        self.large_flow_threshold = flow_sizes[min(large_flow_threshold_index - 1, len(flow_sizes) - 1)]  # Get the flow size at this index
+        # print(f"large flow threshold: {large_flow_threshold_index} has size {self.large_flow_threshold}")
+
+        # Step 5: Determine per-link allocation threshold
+        per_link_flow = total_flow_size / num_links
+
+        # Step 6: Assign links based on cumulative flow size
         target_utilizations = {}
+        cumulative_flow = 0.0
+        link_index = 0
+        threshold = per_link_flow
 
-        print(f"min_flow: {min_flow}, max_flow: {max_flow}, flow_range: {flow_range}")
-        i = 0
+        for flow_size, probability in zip(flow_sizes, probabilities):
+            cumulative_flow += flow_size
+            # print(f"probability: {probability}, cumulative flow size: {cumulative_flow}")
 
-        for link, prob in zip(self.links, probabilities):
-            percentile_flow = self.flow_size_generator.generate_with_probability(prob)
-            utilization_fraction = (percentile_flow - min_flow) / flow_range
-            complementary_utilization_fraction = 1.0 - utilization_fraction
-            target_utilizations[link] = complementary_utilization_fraction
+            while cumulative_flow >= threshold and link_index < num_links:
+                link = self.links[link_index]
+                # print(f"threshold: {threshold}, link_index: {link_index}")
 
-            print(f"link {i} has prob {prob} which has flow size {percentile_flow} and fraction {utilization_fraction} so complementary is {complementary_utilization_fraction}")
-            i += 1
+                # Compute utilization as complementary fraction of flow range
+                utilization_fraction = probability  # Since probability is already cumulative
+                complementary_utilization_fraction = 1.0 - utilization_fraction
+                target_utilizations[link] = complementary_utilization_fraction
+
+                # Move to the next threshold
+                threshold += per_link_flow
+                link_index += 1
+
+            if link_index >= num_links:
+                break  # Stop if all links have been assigned
+
+        # Step 7: If all target utilizations sum to 0, assign 1.0 to all links
+        if sum(target_utilizations.values()) == 0:
+            for link in self.links:
+                target_utilizations[link] = 1.0
+
+        # normalize target utilizations
+        total_utilization = sum(target_utilizations.values())
+        target_utilizations = {link: util / total_utilization for link, util in target_utilizations.items()}
+
+        # print(f"target utilizations: {target_utilizations}")
 
         return target_utilizations
-    
+
     def get_current_utilization(self, link):
         samples = self.link_metric_tracker.get_link_metric_samples(
             link, "link_utilization"
@@ -150,16 +187,22 @@ class PercentileBasedStrategy(LoadBalanceStrategy):
             link: self.get_current_utilization(link) for link in self.links
         }
 
+        # print(f"flow size {flow_size},large threshold: {self.large_flow_threshold}")
+
         if flow_size >= self.large_flow_threshold:
             # For large flows, assign to the link with the lowest current utilization
-            print(f"current utilizations: {current_utilizations}, assigning to lowest which is {min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))}")
+            # print(f"current utilizations: {current_utilizations}, assigning to lowest which is {min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))}")
             return min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))
-
-            # print(f"weights = {[1 - self.target_utilizations[link] for link in self.links]}")
-            # return random.choices(self.links, weights=[1 - self.target_utilizations[link] for link in self.links])[0]
 
         # For normal flows, assign based on target utilization
         return random.choices(self.links, weights=[self.target_utilizations[link] for link in self.links])[0]
+    
+    def select_link(self) -> Link:
+        """Default implementation when flow information isn't available."""
+        current_utilizations = {
+            link: self.get_current_utilization(link) for link in self.links
+        }
+        return min(self.links, key=lambda link: current_utilizations.get(link, float("inf")))
 
 class UnevenLoadBalancingStrategy(LoadBalanceStrategy):
     def __init__(
