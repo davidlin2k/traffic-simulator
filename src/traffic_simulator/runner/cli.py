@@ -1,3 +1,4 @@
+import random
 import click
 import pathlib
 
@@ -10,6 +11,7 @@ from traffic_simulator.ports.link import Link
 from traffic_simulator.ports.strategy import StrategyFactory
 from traffic_simulator.simulator.simulator import Simulator
 
+random.seed(42)
 
 @click.command()
 @click.option(

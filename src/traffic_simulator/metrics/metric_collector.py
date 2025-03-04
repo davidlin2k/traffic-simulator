@@ -59,3 +59,4 @@ class FlowCompletionTimeCollector(MetricCollector):
             for flow in link.flows
             if flow.end_time > 0.0
         ) / len(link.flows)
+

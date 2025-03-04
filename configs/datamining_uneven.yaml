@@ -7,7 +7,7 @@ simulation:
     file: "simulation.log"
 
 network:
-  strategy: "ecmp"
+  strategy: "uneven"
   links:
     - id: "link1"
       capacity: 20480
