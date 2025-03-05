@@ -1,7 +1,7 @@
 version: "1.0"
 
 simulation:
-  duration: 200.0
+  duration: 1000.0
   logging:
     level: "INFO"
     file: "simulation.log"
@@ -12,19 +12,19 @@ network:
     - id: "link1"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 0.2
+      target_utilization: 0.5
     - id: "link2"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 0.2
+      target_utilization: 0.5
     - id: "link3"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 0.4
+      target_utilization: 0.5
     - id: "link4"
       capacity: 10240
       time_window_duration: 60
-      target_utilization: 1.0 
+      target_utilization: 0.5
 
 traffic:
   flow_arrival:

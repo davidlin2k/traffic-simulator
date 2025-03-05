@@ -5,38 +5,35 @@ simulation:
   logging:
     level: "INFO"
     file: "simulation.log"
-  metrics:
-    sample_interval: 3.0
 
 network:
-  strategy: "least_congested"
+  strategy: "uneven"
   links:
     - id: "link1"
-      capacity: 20480
+      capacity: 10240
       time_window_duration: 60
       target_utilization: 0.2
     - id: "link2"
-      capacity: 20480
+      capacity: 10240
       time_window_duration: 60
       target_utilization: 0.2
     - id: "link3"
-      capacity: 20480
+      capacity: 10240
       time_window_duration: 60
       target_utilization: 0.4
     - id: "link4"
-      capacity: 20480
+      capacity: 10240
       time_window_duration: 60
       target_utilization: 1.0 
-
 
 traffic:
   flow_arrival:
     type: "poisson"
-    rate: 5.0 # Less frequent arrival
+    rate: 10.0
   
   flow_size:
     type: "bounded_pareto"
     params:
-      alpha: 1.5  # Adjusted for ML workload distribution
-      lower: 512  # Minimum flow size for gradient updates
-      upper: 1048576  # Large messages for model synchronization
+      alpha: 0.125
+      lower: 3
+      upper: 29892

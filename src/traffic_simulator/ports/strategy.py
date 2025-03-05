@@ -83,7 +83,7 @@ class MostUnderTargetStrategy(LoadBalanceStrategy):
 
         return max(valid_gaps, key=lambda x: x[1])[0]
 
-    def select_link(self, event: FlowArrivalEvent) -> Link:
+    def select_link(self) -> Link:
         """Choose the link most below its target utilization, or least congested if none are under target."""
         most_underutilized = self._find_most_underutilized_link()
         if (most_underutilized):

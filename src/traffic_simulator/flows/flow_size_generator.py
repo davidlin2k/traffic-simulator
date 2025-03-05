@@ -51,11 +51,11 @@ class UniformFlowSizeGenerator(FlowSizeGenerator):
 class QuantileFlowSizeGenerator(FlowSizeGenerator):
     def __init__(self, distribution: Distribution):
         self.distribution = distribution
-        # self.seed = 0
+        self.seed = 65867967934
 
     def generate(self) -> int:
-        # random.seed(self.seed)
-        # self.seed += 1
+        random.seed(self.seed)
+        self.seed += 1
         u = random.random()
         return self.distribution.quantile(u)
     

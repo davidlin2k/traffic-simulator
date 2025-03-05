@@ -1,7 +1,7 @@
 version: "1.0"
 
 simulation:
-  duration: 100.0
+  duration: 1000.0
   logging:
     level: "INFO"
     file: "simulation.log"
