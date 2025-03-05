@@ -28,4 +28,6 @@
 - `traffic-simulator --config configs/websearch_ecmp.yaml --output ./output/websearch_ecmp`
 - `traffic-simulator --config configs/websearch_mut.yaml --output ./output/websearch_mut`
 - `traffic-simulator --config configs/websearch_lc.yaml --output ./output/websearch_lc`
-  
+
+### To run with dynamically calculated lambda
+- `traffic-simulator --config configs/websearch_ecmp.yaml --output ./output/websearch_ecmp_dynamic --dynamic-lambda`
