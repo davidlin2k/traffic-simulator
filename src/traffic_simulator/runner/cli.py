@@ -26,7 +26,13 @@ random.seed(42)
     default="output",
     help="Path to the output directory",
 )
-def cli(config: str, output: str):
+@click.option(
+    "--dynamic-lambda",
+    is_flag=True,
+    default=False,
+    help="Use dynamic lambda calculation",
+)
+def cli(config: str, output: str, dynamic_lambda: bool):
     # Create the output directory if it does not exist
     pathlib.Path(output).mkdir(parents=True, exist_ok=True)
 
@@ -36,6 +42,19 @@ def cli(config: str, output: str):
     distribution = DistributionFactory.create_distribution(distribution_type=sim_config.traffic.flow_size.type, params=sim_config.traffic.flow_size.params)
 
     flow_size_generator = FlowSizeGeneratorFactory.create_generator(sim_config, distribution)
+
+    # Calculate dynamic lambda if requested
+    arrival_rate = sim_config.traffic.flow_arrival.rate
+    if dynamic_lambda:
+        from traffic_simulator.flows.lambda_calculator import calculate_dynamic_lambda
+        links = [Link(capacity_bps=link.capacity) for link in sim_config.network.links]
+        arrival_rate = calculate_dynamic_lambda(
+            sim_config.traffic.flow_size.params,
+            links
+        )
+
+    print(f"Dynamic lambda calculated: {arrival_rate:.2f} (vs. config: {sim_config.traffic.flow_arrival.rate:.2f})")
+
     flow_generator = PoissonFlowGenerator(
         arrival_rate=sim_config.traffic.flow_arrival.rate,
         flow_size_generator=flow_size_generator,
