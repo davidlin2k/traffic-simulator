@@ -82,7 +82,7 @@ class Simulator:
                 self._process_packet_completion(event)
 
             # Log progress
-            print(f"time: {self._time:.2f}, event_type: {event.__class__.__name__}")
+            #print(f"time: {self._time:.2f}, event_type: {event.__class__.__name__}")
 
         self._sample_stats()
         self.visualize()
