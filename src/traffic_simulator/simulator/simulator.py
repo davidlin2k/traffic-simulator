@@ -82,7 +82,7 @@ class Simulator:
                 self._process_packet_completion(event)
 
             # Log progress
-            #print(f"time: {self._time:.2f}, event_type: {event.__class__.__name__}")
+            # print(f"time: {self._time:.2f}, event_type: {event.__class__.__name__}")
 
         self._sample_stats()
         self.visualize()
@@ -126,6 +126,7 @@ class Simulator:
         self.visualizer.plot_variance(self.links, save_path=save_path)
         self.visualizer.plot_buffer_occupancy(self.links, save_path=save_path)
         self.visualizer.plot_fct(self.links, save_path=save_path)
+        self.visualizer.plot_link_imbalance(self.links, save_path=save_path)
 
         self._visualize_flows_scatter(save_path)
 

@@ -12,11 +12,11 @@ network:
     - id: "link1"
       capacity: 20480
       time_window_duration: 60
-      target_utilization: 0.2
+      target_utilization: 0.0
     - id: "link2"
       capacity: 20480
       time_window_duration: 60
-      target_utilization: 0.8
+      target_utilization: 0.0
     - id: "link3"
       capacity: 20480
       time_window_duration: 60

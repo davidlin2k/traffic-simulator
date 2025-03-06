@@ -68,7 +68,7 @@ class NetworkConfig(BaseModel):
         ]
     links: List[LinkConfig]
     buffer_link_indices: Optional[List[int]] = None  # Indices of links to use as buffers
-    large_flow_percentile: Optional[float] = 95.0  # Percentile threshold for large flows
+    large_flow_percentile: Optional[float] = 99.5  # Percentile threshold for large flows
 
 
 class PoissonArrivalConfig(BaseModel):

@@ -1,3 +1,4 @@
+import math
 import random
 from abc import ABC, abstractmethod
 import statistics
@@ -211,21 +212,25 @@ class UnevenLoadBalancingStrategy(LoadBalanceStrategy):
         link_metric_tracker: LinkMetricsTracker,
         config: MainConfig,
         buffer_link_indices: list[int] | None = None,
-        percentile_threshold: float = 95.0,
+        percentile_threshold: float = 99.0,
         distribution: Distribution | None = None,
     ):
         super().__init__(links)
         # Default: use 20% of links as buffer links if not specified
-        self.buffer_link_indices = buffer_link_indices or list(range(len(links) // 5))
+        self.buffer_link_indices = buffer_link_indices or list(range(2))
         self.buffer_links = [links[i] for i in self.buffer_link_indices]
         self.normal_links = [link for i, link in enumerate(links) if i not in self.buffer_link_indices]
         self.link_metric_tracker = link_metric_tracker
         self.config = config
         self.percentile_threshold = percentile_threshold
         self.distribution = distribution
+
+        print(self.buffer_link_indices)
+        print(self.normal_links)
     
     def get_flow_size_threshold(self):
         """Calculate the threshold for routing to buffer links"""
+        print(self.percentile_threshold)
         return self.distribution.percentile(self.percentile_threshold)
     
     def select_link_for_flow(self, flow: Flow) -> Link:
@@ -233,6 +238,7 @@ class UnevenLoadBalancingStrategy(LoadBalanceStrategy):
         threshold = self.get_flow_size_threshold()
         
         if flow.flow_size > threshold:
+            print(f"flow size {flow.flow_size} is greater than threshold {threshold}")
             # Large flow: route to least loaded buffer link
             if self.buffer_links:
                 return min(self.buffer_links, key=lambda link: link.busy_until)

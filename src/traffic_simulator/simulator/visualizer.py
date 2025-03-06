@@ -433,3 +433,74 @@ class LinkVisualizer:
             plt.savefig(file_path, bbox_inches="tight", dpi=300)
 
         return fig, ax
+    
+    def plot_link_imbalance(
+        self,
+        links: list[Link],
+        fig_size: Tuple[int, int] = (12, 6),
+        save_path: Optional[str] = None
+    ):
+        """
+        Measure the imbalance by max - min of link utilization for each time.
+        """
+        # Dictionary to store all link's utilization at each time step
+        utilization_over_time = {}
+
+        # Collect utilization data for all links
+        for link in links:
+            samples = self.metrics_tracker.get_link_metric_samples(
+                link, "link_utilization"
+            )
+            if not samples:
+                continue
+
+            times, utils = zip(*samples)
+            times = np.array(times)
+            # Convert to percentage
+            utils = np.array(utils) * 100
+
+            # Store utilization at each timestamp
+            for time, util in zip(times, utils):
+                if time not in utilization_over_time:
+                    utilization_over_time[time] = []
+                utilization_over_time[time].append(util)
+
+        # Calculate imbalance (max - min) at each timestamp
+        times_sorted = sorted(utilization_over_time.keys())
+        imbalances = [
+            max(utilization_over_time[t]) - min(utilization_over_time[t]) 
+            for t in times_sorted if len(utilization_over_time[t]) >= 2
+        ]
+        times_with_multiple_links = [
+            t for t in times_sorted if len(utilization_over_time[t]) >= 2
+        ]
+
+        if not imbalances:
+            print("No data points to plot imbalance")
+            return None, None
+
+        # Create the plot
+        fig, ax = plt.subplots(figsize=fig_size)
+        
+        # Plot imbalance over time
+        ax.plot(times_with_multiple_links, imbalances, color="blue", label="Link Utilization Imbalance")
+        
+        # Calculate average imbalance
+        avg_imbalance = np.mean(imbalances)
+        ax.axhline(y=avg_imbalance, color="red", linestyle="--", alpha=0.8, 
+                label=f"Average Imbalance ({avg_imbalance:.2f}%)")
+
+        # Customize plot
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Utilization Imbalance (%)")
+        ax.set_title("Link Utilization Imbalance Over Time (Max - Min)")
+        ax.grid(True, linestyle="--", alpha=0.7)
+        ax.legend()
+        plt.tight_layout()
+
+        # Save if path provided
+        if save_path:
+            plt.savefig(save_path + "/link_imbalance.png", bbox_inches="tight", dpi=300)
+
+        return fig, ax
+    
