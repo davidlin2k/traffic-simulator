@@ -211,13 +211,13 @@ class UnevenLoadBalancingStrategy(LoadBalanceStrategy):
         links: list[Link],
         link_metric_tracker: LinkMetricsTracker,
         config: MainConfig,
-        buffer_link_indices: list[int] | None = None,
+        buffer_links: int = 0,
         percentile_threshold: float = 99.0,
         distribution: Distribution | None = None,
     ):
         super().__init__(links)
         # Default: use 20% of links as buffer links if not specified
-        self.buffer_link_indices = buffer_link_indices or list(range(2))
+        self.buffer_link_indices = list(range(buffer_links))
         self.buffer_links = [links[i] for i in self.buffer_link_indices]
         self.normal_links = [link for i, link in enumerate(links) if i not in self.buffer_link_indices]
         self.link_metric_tracker = link_metric_tracker
@@ -277,11 +277,11 @@ class StrategyFactory:
         elif strategy_name == "percentile_based":
             return PercentileBasedStrategy(links, link_metric_tracker, flow_size_generator)
         elif strategy_name == "uneven":
-            buffer_link_indices = getattr(config.network, "buffer_link_indices", None)
-            percentile_threshold = getattr(config.network, "large_flow_percentile", 95.0)
+            buffer_links = getattr(config.network, "buffer_links", 0)
+            percentile_threshold = getattr(config.network, "large_flow_percentile", 99.0)
             return UnevenLoadBalancingStrategy(
                 links, link_metric_tracker, config, 
-                buffer_link_indices, percentile_threshold, distribution
+                buffer_links, percentile_threshold, distribution
             )
         else:
             raise ValueError(f"Invalid strategy name: {strategy_name}")

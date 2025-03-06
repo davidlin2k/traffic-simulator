@@ -8,6 +8,8 @@ simulation:
 
 network:
   strategy: "uneven"
+  large_flow_percentile: 99.0
+  buffer_links: 3
   links:
     - id: "link1"
       capacity: 20480
@@ -20,7 +22,7 @@ network:
     - id: "link3"
       capacity: 20480
       time_window_duration: 60
-      target_utilization: 0.8
+      target_utilization: 0.0
     - id: "link4"
       capacity: 20480
       time_window_duration: 60

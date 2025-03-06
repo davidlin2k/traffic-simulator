@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import math
 
 from traffic_simulator.config.models import BoundedParetoParams
 
@@ -47,6 +48,18 @@ class BoundedParetoDistribution(Distribution):
         )
         x = self.L / denominator
         return int(x)
+    
+    def mean(self) -> float:
+        if self.L <= 0 or self.U <= self.L:
+            raise ValueError("Require L > 0 and u > L.")
+    
+        # Special case when alpha equals 1
+        if self.alpha == 1:
+            return self.L * math.log(self.U / self.L) / (1 - self.L / self.U)
+        else:
+            numerator = self.alpha * (self.L ** self.alpha) * (self.U**(1 - self.alpha) - self.L ** (1 - self.alpha))
+            denominator = (1 - (self.L / self.U) ** self.alpha) * (1 - self.alpha)
+            return numerator / denominator
 
 
 class DistributionFactory:
